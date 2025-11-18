@@ -1,0 +1,9 @@
+config:
+  outputs: |
+    [OUTPUT]
+        Name        http
+        Match       *
+        Host        log-analyzer
+        Port        8080
+        URI         /ingest
+        Format      json
