@@ -1,5 +1,6 @@
 package common
 
+// fluentbit log event
 type LogEvent struct {
 	Date        float64     `json:"date"`
 	Log         string      `json:"log"`

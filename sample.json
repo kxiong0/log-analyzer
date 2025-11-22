@@ -1,0 +1,152 @@
+[
+    {
+        "date": 1763507688.326804,
+        "time": "2025-11-18T23:14:48.326803805Z",
+        "stream": "stderr",
+        "_p": "F",
+        "log": "[2025/11/18 23:14:48.326131847] [ info] [output:http:http.0] log-analyzer:8080, HTTP status=200",
+        "kubernetes": {
+            "pod_name": "fluent-bit-k5z68",
+            "namespace_name": "logging",
+            "pod_id": "39a3e1da-6643-4c34-b0ae-bf112e689e34",
+            "labels": {
+                "app.kubernetes.io/instance": "fluent-bit",
+                "app.kubernetes.io/name": "fluent-bit",
+                "controller-revision-hash": "6bcf746554",
+                "pod-template-generation": "3"
+            },
+            "annotations": {
+                "checksum/config": "af5770feeeb4a54055165d273084025e22e2881893bc595accaf5cdbacf71946"
+            },
+            "host": "kind-control-plane",
+            "container_name": "fluent-bit",
+            "docker_id": "cdc037893d7e893c17d8e065dc22db8f9e04a314787cca30a926e725ca6032a0",
+            "container_image": "cr.fluentbit.io/fluent/fluent-bit:4.1.0"
+        }
+    },
+    {
+        "date": 1763507688.326893,
+        "time": "2025-11-18T23:14:48.326892722Z",
+        "stream": "stderr",
+        "_p": "F",
+        "log": "Content-Length: 4281",
+        "kubernetes": {
+            "pod_name": "fluent-bit-k5z68",
+            "namespace_name": "logging",
+            "pod_id": "39a3e1da-6643-4c34-b0ae-bf112e689e34",
+            "labels": {
+                "app.kubernetes.io/instance": "fluent-bit",
+                "app.kubernetes.io/name": "fluent-bit",
+                "controller-revision-hash": "6bcf746554",
+                "pod-template-generation": "3"
+            },
+            "annotations": {
+                "checksum/config": "af5770feeeb4a54055165d273084025e22e2881893bc595accaf5cdbacf71946"
+            },
+            "host": "kind-control-plane",
+            "container_name": "fluent-bit",
+            "docker_id": "cdc037893d7e893c17d8e065dc22db8f9e04a314787cca30a926e725ca6032a0",
+            "container_image": "cr.fluentbit.io/fluent/fluent-bit:4.1.0"
+        }
+    },
+    {
+        "date": 1763507688.326906,
+        "time": "2025-11-18T23:14:48.326906139Z",
+        "stream": "stderr",
+        "_p": "F",
+        "log": "Content-Type: application/json",
+        "kubernetes": {
+            "pod_name": "fluent-bit-k5z68",
+            "namespace_name": "logging",
+            "pod_id": "39a3e1da-6643-4c34-b0ae-bf112e689e34",
+            "labels": {
+                "app.kubernetes.io/instance": "fluent-bit",
+                "app.kubernetes.io/name": "fluent-bit",
+                "controller-revision-hash": "6bcf746554",
+                "pod-template-generation": "3"
+            },
+            "annotations": {
+                "checksum/config": "af5770feeeb4a54055165d273084025e22e2881893bc595accaf5cdbacf71946"
+            },
+            "host": "kind-control-plane",
+            "container_name": "fluent-bit",
+            "docker_id": "cdc037893d7e893c17d8e065dc22db8f9e04a314787cca30a926e725ca6032a0",
+            "container_image": "cr.fluentbit.io/fluent/fluent-bit:4.1.0"
+        }
+    },
+    {
+        "date": 1763507688.326913,
+        "time": "2025-11-18T23:14:48.326912889Z",
+        "stream": "stderr",
+        "_p": "F",
+        "log": "User-Agent: Fluent-Bit",
+        "kubernetes": {
+            "pod_name": "fluent-bit-k5z68",
+            "namespace_name": "logging",
+            "pod_id": "39a3e1da-6643-4c34-b0ae-bf112e689e34",
+            "labels": {
+                "app.kubernetes.io/instance": "fluent-bit",
+                "app.kubernetes.io/name": "fluent-bit",
+                "controller-revision-hash": "6bcf746554",
+                "pod-template-generation": "3"
+            },
+            "annotations": {
+                "checksum/config": "af5770feeeb4a54055165d273084025e22e2881893bc595accaf5cdbacf71946"
+            },
+            "host": "kind-control-plane",
+            "container_name": "fluent-bit",
+            "docker_id": "cdc037893d7e893c17d8e065dc22db8f9e04a314787cca30a926e725ca6032a0",
+            "container_image": "cr.fluentbit.io/fluent/fluent-bit:4.1.0"
+        }
+    },
+    {
+        "date": 1763507688.326919,
+        "time": "2025-11-18T23:14:48.326919389Z",
+        "stream": "stderr",
+        "_p": "F",
+        "log": "Connection: keep-alive",
+        "kubernetes": {
+            "pod_name": "fluent-bit-k5z68",
+            "namespace_name": "logging",
+            "pod_id": "39a3e1da-6643-4c34-b0ae-bf112e689e34",
+            "labels": {
+                "app.kubernetes.io/instance": "fluent-bit",
+                "app.kubernetes.io/name": "fluent-bit",
+                "controller-revision-hash": "6bcf746554",
+                "pod-template-generation": "3"
+            },
+            "annotations": {
+                "checksum/config": "af5770feeeb4a54055165d273084025e22e2881893bc595accaf5cdbacf71946"
+            },
+            "host": "kind-control-plane",
+            "container_name": "fluent-bit",
+            "docker_id": "cdc037893d7e893c17d8e065dc22db8f9e04a314787cca30a926e725ca6032a0",
+            "container_image": "cr.fluentbit.io/fluent/fluent-bit:4.1.0"
+        }
+    },
+    {
+        "date": 1763507688.326925,
+        "time": "2025-11-18T23:14:48.326924472Z",
+        "stream": "stderr",
+        "_p": "F",
+        "log": "",
+        "kubernetes": {
+            "pod_name": "fluent-bit-k5z68",
+            "namespace_name": "logging",
+            "pod_id": "39a3e1da-6643-4c34-b0ae-bf112e689e34",
+            "labels": {
+                "app.kubernetes.io/instance": "fluent-bit",
+                "app.kubernetes.io/name": "fluent-bit",
+                "controller-revision-hash": "6bcf746554",
+                "pod-template-generation": "3"
+            },
+            "annotations": {
+                "checksum/config": "af5770feeeb4a54055165d273084025e22e2881893bc595accaf5cdbacf71946"
+            },
+            "host": "kind-control-plane",
+            "container_name": "fluent-bit",
+            "docker_id": "cdc037893d7e893c17d8e065dc22db8f9e04a314787cca30a926e725ca6032a0",
+            "container_image": "cr.fluentbit.io/fluent/fluent-bit:4.1.0"
+        }
+    }
+]

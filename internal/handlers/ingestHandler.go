@@ -1,12 +1,13 @@
 package ingest
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 
-	p "log-analyzer/internal/parser"
+	common "log-analyzer/internal/common"
 )
 
 const (
@@ -20,7 +21,8 @@ func IngestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	les, err := p.ParseJson(bodyBytes)
+	var logs []common.LogEvent
+	err = json.Unmarshal(bodyBytes, &logs)
 	if err != nil {
 		errString := fmt.Sprintf("Unable to parse log as a JSON string: %s", err)
 		http.Error(w, errString, http.StatusBadRequest)
@@ -33,8 +35,11 @@ func IngestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for _, le := range les {
+	for _, le := range logs {
 		pString := fmt.Sprintln("Date:", le.Date, "Pod:", le.K8sMetadata.PodName, "Log:", le.Log)
+		for key, val := range le.K8sMetadata.Labels {
+			pString += "Label: " + key + ":" + val.(string) + "\n"
+		}
 		if _, err := f.Write([]byte(pString + "\n")); err != nil {
 			http.Error(w, "failed to write to file", http.StatusBadRequest)
 			return
