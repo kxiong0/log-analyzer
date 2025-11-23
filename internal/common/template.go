@@ -1,27 +1,35 @@
 package common
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/google/uuid"
+)
 
 type Template struct {
-	ID         uint32
-	Tokens     []string // the canonical pattern: ["GET", "<NUM>", "users", "<UUID>"]
-	RawPattern string   // optional human-readable pattern
+	ID     string   // uuid
+	Tokens []string // the canonical pattern: ["GET", "<NUM>", "users", "<UUID>"]
 }
 
 type TemplateTree map[int][]Template // key = token_count
 
-func (tt TemplateTree) Find(tokens []string) (uint32, bool) {
+func (tt TemplateTree) Find(tokens []string) (string, bool) {
 	candidates := tt[len(tokens)]
 	for _, tmpl := range candidates {
 		if matchesTemplate(tokens, tmpl.Tokens) {
 			return tmpl.ID, true
 		}
 	}
-	return 0, false
+	return "", false
 }
 
-func (tt TemplateTree) NewTemplate(tokens []string) {
-	// TODO
+func (tt TemplateTree) Save(tokens []string) string {
+	// Create new template and return its UUID
+	t := Template{ID: uuid.NewString(), Tokens: tokens}
+	tt[len(tokens)] = append(tt[len(tokens)], t)
+	fmt.Println("Added template ", tokens, " to len ", len(tokens))
+	return t.ID
 }
 
 func matchesTemplate(tokens, tmpl []string) bool {

@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	// mux := http.NewServeMux()
-	http.HandleFunc("/ingest", handlers.IngestHandler)
+	s := handlers.NewServer()
+	http.HandleFunc("/ingest", s.Ingest)
 	http.ListenAndServe(":8080", nil)
 }

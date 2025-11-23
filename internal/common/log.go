@@ -17,10 +17,10 @@ type K8sMetadata struct {
 	ContainerImg  string                 `json:"container_image"`
 }
 
-type NormalizedLog struct {
-	TemplateID  uint32   // identifies the structural template
-	Tokens      []string // raw tokens after masking
-	Raw         string   // original log line (optional)
-	Date        float64
-	K8sMetadata K8sMetadata `json:"kubernetes"`
-}
+// type NormalizedLog struct {
+// 	TemplateID  uint32   // identifies the structural template
+// 	Tokens      []string // raw tokens after masking
+// 	Raw         string   // original log line (optional)
+// 	Date        float64
+// 	K8sMetadata K8sMetadata `json:"kubernetes"`
+// }

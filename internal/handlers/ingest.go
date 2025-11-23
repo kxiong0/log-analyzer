@@ -15,7 +15,18 @@ const (
 	outputFile = "access.log"
 )
 
-func IngestHandler(w http.ResponseWriter, req *http.Request) {
+func NewServer() *Server {
+	s := Server{
+		lp: *p.NewLogParser(),
+	}
+	return &s
+}
+
+type Server struct {
+	lp p.LogParser
+}
+
+func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
 	bodyBytes, err := io.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
@@ -38,8 +49,7 @@ func IngestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, le := range logs {
-
-		tokens := p.ParseLog(le.Log)
+		tokens := s.lp.ParseLog(le.Log)
 		lstr := fmt.Sprintln("raw log", le.Log)
 		lstr += fmt.Sprintln("tokens: ", tokens)
 		if _, err := f.Write([]byte(lstr + "\n")); err != nil {

@@ -3,12 +3,25 @@ package parser
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
+
+	common "log-analyzer/internal/common"
 )
 
 var logFieldAlias = []string{"message", "msg", "log"}
 
-func ParseLog(s string) []string {
+func NewLogParser() *LogParser {
+	return &LogParser{
+		tt: make(common.TemplateTree),
+	}
+}
+
+type LogParser struct {
+	tt common.TemplateTree
+}
+
+func (lp LogParser) ParseLog(s string) []string {
 	// Try to parse incoming log as a JSON string
 	rawLog, err := parseJsonLog(s)
 	if err != nil {
@@ -20,6 +33,13 @@ func ParseLog(s string) []string {
 	for i, token := range tokens {
 		tokens[i] = postNormalize(token)
 	}
+
+	tid, ok := lp.tt.Find(tokens)
+	if !ok {
+		tid = lp.tt.Save(tokens)
+	}
+
+	fmt.Println("template id of tokens:", tid)
 	return tokens
 }
 
