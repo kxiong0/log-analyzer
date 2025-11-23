@@ -8,6 +8,7 @@ import (
 	"os"
 
 	common "log-analyzer/internal/common"
+	p "log-analyzer/internal/parser"
 )
 
 const (
@@ -29,6 +30,7 @@ func IngestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// write output to a file for now
 	f, err := os.OpenFile(outputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		http.Error(w, "failed to write to file", http.StatusBadRequest)
@@ -36,11 +38,11 @@ func IngestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, le := range logs {
-		pString := fmt.Sprintln("Date:", le.Date, "Pod:", le.K8sMetadata.PodName, "Log:", le.Log)
-		for key, val := range le.K8sMetadata.Labels {
-			pString += "Label: " + key + ":" + val.(string) + "\n"
-		}
-		if _, err := f.Write([]byte(pString + "\n")); err != nil {
+
+		tokens := p.ParseLog(le.Log)
+		lstr := fmt.Sprintln("raw log", le.Log)
+		lstr += fmt.Sprintln("tokens: ", tokens)
+		if _, err := f.Write([]byte(lstr + "\n")); err != nil {
 			http.Error(w, "failed to write to file", http.StatusBadRequest)
 			return
 		}

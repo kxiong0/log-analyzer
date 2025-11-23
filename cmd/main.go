@@ -1,13 +1,12 @@
 package main
 
 import (
-	ingest "log-analyzer/internal/ingest"
-
+	handlers "log-analyzer/internal/handlers"
 	"net/http"
 )
 
 func main() {
 	// mux := http.NewServeMux()
-	http.HandleFunc("/ingest", ingest.IngestHandler)
+	http.HandleFunc("/ingest", handlers.IngestHandler)
 	http.ListenAndServe(":8080", nil)
 }
