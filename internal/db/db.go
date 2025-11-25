@@ -53,18 +53,20 @@ func (tdb *TemplateDB) SaveTemplate(t common.Template) error {
 	return nil
 }
 
-func (tdb *TemplateDB) GetAllTemplates() ([]common.Template, error) {
-	rows, err := tdb.db.Query("SELECT uuid, template_text FROM templates;")
+// Get all templates from DB and return a map of token count -> Templates
+func (tdb *TemplateDB) GetAllTemplates() (map[int][]common.Template, error) {
+	rows, err := tdb.db.Query("SELECT uuid, token_count, template_text FROM templates;")
 	if err != nil {
 		return nil, sql.ErrConnDone
 	}
 
-	templates := []common.Template{}
+	templates := make(map[int][]common.Template)
 	for rows.Next() {
 		var uuid string
+		var token_count int
 		var template_text string
 
-		err := rows.Scan(&uuid, &template_text)
+		err := rows.Scan(&uuid, &token_count, &template_text)
 		if err != nil {
 			slog.Error("Failed to read template row into vars")
 			continue
@@ -74,7 +76,7 @@ func (tdb *TemplateDB) GetAllTemplates() ([]common.Template, error) {
 			ID:     uuid,
 			Tokens: strings.Fields(template_text),
 		}
-		templates = append(templates, t)
+		templates[token_count] = append(templates[token_count], t)
 	}
 	return templates, nil
 }

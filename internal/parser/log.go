@@ -101,7 +101,7 @@ func postNormalize(s string) string {
 	return s
 }
 
-// Load templates from DB
+// Load templates from DB and store in TemplateTree
 func (lp *LogParser) LoadTemplates() error {
 	slog.Debug("Loading templates from DB...")
 
@@ -111,8 +111,7 @@ func (lp *LogParser) LoadTemplates() error {
 		return err
 	}
 
-	for _, t := range templates {
-		lp.tt[len(t.Tokens)] = append(lp.tt[len(t.Tokens)], t)
-	}
+	slog.Debug("Successfully loaded template tree from DB")
+	lp.tt = templates
 	return nil
 }
