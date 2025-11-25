@@ -58,6 +58,13 @@ func (lp LogParser) ParseLog(s string) string {
 		lp.tdb.SaveTemplate(common.Template{ID: tid, Tokens: tokens})
 	}
 
+	// Count template and increase count
+	slog.Info("Counting template...")
+	err = lp.tdb.CountTemplate(tid)
+	if err != nil {
+		slog.Error("Failed to count template:", err)
+	}
+
 	return tid
 }
 

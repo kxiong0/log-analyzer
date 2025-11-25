@@ -13,3 +13,7 @@ kubectl logs log-analyzer -n logging -f
 ```
 helm upgrade --install fluent-bit fluent/fluent-bit -f fluentbit-values.yaml  -n logging
 ```
+
+```
+ab -c 500 -n 500 http://localhost:8080/ingest
+```
