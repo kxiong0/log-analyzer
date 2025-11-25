@@ -17,16 +17,16 @@ const (
 )
 
 func NewLogParser() (*LogParser, error) {
-	lp := &LogParser{
-		tt: make(common.TemplateTree),
-	}
+	lp := &LogParser{}
 
-	// Init db
+	// Init DB
 	tdb, err := db.NewTemplateDB(databaseFile)
 	if err != nil {
 		return nil, err
 	}
 	lp.tdb = tdb
+
+	// Fetch template tree from DB
 	lp.LoadTemplates()
 
 	return lp, nil
@@ -59,10 +59,10 @@ func (lp LogParser) ParseLog(s string) string {
 	}
 
 	// Count template and increase count
-	slog.Info("Counting template...")
 	err = lp.tdb.CountTemplate(tid)
 	if err != nil {
-		slog.Error("Failed to count template:", err)
+		slog.Error("Failed to count template:",
+			"error", err)
 	}
 
 	return tid

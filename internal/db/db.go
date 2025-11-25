@@ -173,23 +173,46 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 		return err
 	}
 
+	newMean, newStddev, err := calculateIAT(
+		iatLastTimestamp, iatMean, iatMean, count,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Update stats
+	_, err = tdb.db.Exec(`
+		UPDATE template_stats
+		SET total_count = total_count + 1,
+			iat_mean = ?,
+			iat_stddev = ?,
+			iat_last_timestamp = ?
+		WHERE template_id = ?
+	`, newMean, newStddev, time.Now().UTC().Format(timestampFormat), uuid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func calculateIAT(lastTimestamp interface{}, mean float64, stddev float64, count int) (float64, float64, error) {
 	newMean := 0.0
 	newStddev := 0.0
 	currTime := time.Now().UTC()
-	if iatLastTimestamp == nil {
+	if lastTimestamp == nil {
 		// No previous data
-		iatLastTimestamp = currTime.Format(timestampFormat)
+		lastTimestamp = currTime.Format(timestampFormat)
 	} else {
 		// Calculate new IAT stats
-		lastTime, err := time.Parse(timestampFormat, iatLastTimestamp.(string))
+		lastTime, err := time.Parse(timestampFormat, lastTimestamp.(string))
 		if err != nil {
-			return err
+			return 0.0, 0.0, err
 		}
 
 		// Recover old M2
 		var oldM2 float64
 		if count >= 2 {
-			oldM2 = iatStddev * iatStddev * float64(count-1)
+			oldM2 = stddev * stddev * float64(count-1)
 		}
 
 		newCount := count + 1
@@ -198,8 +221,8 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 		iat := currTime.Sub(lastTime).Seconds()
 
 		// Calculate new mean
-		delta := iat - iatMean
-		newMean = iatMean + delta/float64(newCount)
+		delta := iat - mean
+		newMean = mean + delta/float64(newCount)
 		delta2 := iat - newMean
 		newM2 := oldM2 + delta*delta2
 
@@ -209,19 +232,5 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 			newStddev = math.Sqrt(variance)
 		}
 	}
-
-	// Update stats
-	slog.Debug("Updating stats...")
-	_, err = tdb.db.Exec(`
-		UPDATE template_stats
-		SET total_count = total_count + 1,
-			iat_mean = ?,
-			iat_stddev = ?,
-			iat_last_timestamp = ?
-		WHERE template_id = ?
-	`, newMean, newStddev, currTime.Format(timestampFormat), uuid)
-	if err != nil {
-		return err
-	}
-	return nil
+	return newMean, newStddev, nil
 }

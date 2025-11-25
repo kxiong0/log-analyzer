@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"io"
 	common "log-analyzer/internal/common"
-	"log/slog"
 	"net/http"
 	"os"
 )
 
 func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
-	slog.Debug("Received request to ingest logs")
-
 	bodyBytes, err := io.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
