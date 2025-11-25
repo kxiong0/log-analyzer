@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+	"sync"
 
 	common "log-analyzer/internal/common"
 	db "log-analyzer/internal/db"
@@ -35,9 +36,12 @@ func NewLogParser() (*LogParser, error) {
 type LogParser struct {
 	tt  common.TemplateTree
 	tdb *db.TemplateDB
+
+	prevTid   string
+	prevTidMu sync.Mutex
 }
 
-func (lp LogParser) ParseLog(s string) string {
+func (lp *LogParser) ParseLog(s string) string {
 	// Try to parse incoming log as a JSON string
 	// Returns template ID of the parsed log
 	rawLog, err := parseJsonLog(s)
@@ -59,11 +63,22 @@ func (lp LogParser) ParseLog(s string) string {
 	}
 
 	// Count template and increase count
-	err = lp.tdb.CountTemplate(tid)
-	if err != nil {
-		slog.Error("Failed to count template:",
+	if err = lp.tdb.CountTemplate(tid); err != nil {
+		slog.Error("Failed to process template:",
 			"error", err)
 	}
+	if err = lp.tdb.CountTemplateHourly(tid); err != nil {
+		slog.Error("Failed to process template:",
+			"error", err)
+	}
+
+	lp.prevTidMu.Lock()
+	if err = lp.tdb.CountTransition(lp.prevTid, tid); err != nil {
+		slog.Error("Failed to process template:",
+			"error", err)
+	}
+	lp.prevTid = tid
+	lp.prevTidMu.Unlock()
 
 	return tid
 }

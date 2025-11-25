@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"math"
 	"strings"
@@ -58,7 +59,7 @@ func (tdb *TemplateDB) InitTables() error {
 	CREATE TABLE IF NOT EXISTS template_transitions (
 		src_template_id TEXT NOT NULL,
 		dst_template_id TEXT NOT NULL,
-		count INTEGER NOT NULL DEFAULT 1,
+		count INTEGER NOT NULL DEFAULT 0,
 		last_seen TEXT DEFAULT CURRENT_TIMESTAMP,
 
 		PRIMARY KEY (src_template_id, dst_template_id),
@@ -147,22 +148,9 @@ func (tdb *TemplateDB) GetAllTemplates() (map[int][]common.Template, error) {
 
 func (tdb *TemplateDB) CountTemplate(uuid string) error {
 	// Insert new rows for new template
-	currentHour := time.Now().UTC().Format(hourTimeFormat)
 	_, err := tdb.db.Exec(`
 		INSERT OR IGNORE INTO template_stats (template_id) VALUES (?);
-		INSERT OR IGNORE INTO template_hourly_counts (template_id, hour)
-		VALUES (?, ?);
-	`, uuid, uuid, currentHour)
-	if err != nil {
-		return err
-	}
-
-	// Update hourly stat
-	_, err = tdb.db.Exec(`
-		UPDATE template_hourly_counts
-		SET count = count + 1
-		WHERE template_id = ? AND hour = ?
-	`, uuid, currentHour)
+	`, uuid)
 	if err != nil {
 		return err
 	}
@@ -191,14 +179,16 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 	}
 
 	// Update stats
+	currTs := time.Now().UTC().Format(timestampFormat)
 	_, err = tdb.db.Exec(`
 		UPDATE template_stats
 		SET total_count = total_count + 1,
+			last_seen = ?,
 			iat_mean = ?,
 			iat_stddev = ?,
 			iat_last_timestamp = ?
 		WHERE template_id = ?
-	`, newMean, newStddev, time.Now().UTC().Format(timestampFormat), uuid)
+	`, currTs, newMean, newStddev, currTs, uuid)
 	if err != nil {
 		return err
 	}
@@ -244,4 +234,57 @@ func calculateIAT(lastTimestamp interface{}, mean float64, stddev float64, count
 		}
 	}
 	return newMean, newStddev, nil
+}
+
+// Update hourly count for template
+func (tdb *TemplateDB) CountTemplateHourly(uuid string) error {
+	// Insert new rows for new template
+	currentHour := time.Now().UTC().Format(hourTimeFormat)
+	_, err := tdb.db.Exec(`
+		INSERT OR IGNORE INTO template_hourly_counts (template_id, hour)
+		VALUES (?, ?);
+	`, uuid, currentHour)
+	if err != nil {
+		return err
+	}
+
+	_, err = tdb.db.Exec(`
+		UPDATE template_hourly_counts
+		SET count = count + 1
+		WHERE template_id = ? AND hour = ?
+	`, uuid, currentHour)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Increment count on template transition from template `prevId` to `uuid`
+func (tdb *TemplateDB) CountTransition(prevId string, uuid string) error {
+	// Ignore empty IDs
+	if len(prevId) == 0 || len(uuid) == 0 {
+		return nil
+	}
+
+	slog.Debug(fmt.Sprintf("Writing transition from %s to %s", prevId, uuid))
+
+	_, err := tdb.db.Exec(`
+		INSERT OR IGNORE INTO template_transitions (src_template_id, dst_template_id)
+		VALUES (?, ?);
+	`, prevId, uuid)
+	if err != nil {
+		return err
+	}
+
+	_, err = tdb.db.Exec(`
+		UPDATE template_transitions
+		SET count = count + 1
+		WHERE src_template_id = ? AND dst_template_id = ?
+	`, prevId, uuid)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
