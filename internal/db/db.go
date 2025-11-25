@@ -12,17 +12,30 @@ import (
 
 func NewTemplateDB(dataSourceName string) (*TemplateDB, error) {
 	slog.Info("Connecting to template DB")
-	sdb := TemplateDB{}
+	tdb := TemplateDB{}
 
 	// Open DB
 	db, err := sql.Open("sqlite", dataSourceName)
 	if err != nil {
 		return nil, err
 	}
-	sdb.db = db
+	tdb.db = db
+	slog.Info("Connected to template DB")
 
-	// Init table
-	_, err = db.Exec(`
+	// Init tables
+	tdb.InitTables()
+
+	return &tdb, nil
+}
+
+type TemplateDB struct {
+	db *sql.DB
+}
+
+// Create DB tables if they don't exist
+func (tdb *TemplateDB) InitTables() error {
+	slog.Debug("Creating tables...")
+	_, err := tdb.db.Exec(`
 	CREATE TABLE IF NOT EXISTS templates(
 		uuid TEXT PRIMARY KEY,
 		token_count INTEGER NOT NULL,
@@ -30,15 +43,60 @@ func NewTemplateDB(dataSourceName string) (*TemplateDB, error) {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	slog.Info("Connected to template DB")
 
-	return &sdb, nil
-}
+	_, err = tdb.db.Exec(`
+	CREATE TABLE IF NOT EXISTS template_transitions (
+		src_template_id TEXT NOT NULL,
+		dst_template_id TEXT NOT NULL,
+		count INTEGER NOT NULL DEFAULT 1,
+		last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-type TemplateDB struct {
-	db *sql.DB
+		PRIMARY KEY (src_template_id, dst_template_id),
+
+		FOREIGN KEY (src_template_id) REFERENCES templates(id),
+		FOREIGN KEY (dst_template_id) REFERENCES templates(id)
+	);`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tdb.db.Exec(`
+	CREATE TABLE IF NOT EXISTS template_stats (
+		template_id TEXT PRIMARY KEY,
+		
+		-- Aggregated frequency over time
+		total_count INTEGER NOT NULL DEFAULT 0,
+		last_seen DATETIME,
+		
+		-- Interarrival time statistics (in seconds)
+		iat_mean REAL,            -- mean interarrival time
+		iat_stddev REAL,          -- std dev of interarrival time
+		iat_last_timestamp DATETIME,
+		
+		-- Optional: numeric-field distributions
+		numeric_json TEXT,        -- {"latency_ms": {"mean": 53.3, "std": 10.1}}
+		
+		FOREIGN KEY (template_id) REFERENCES templates(id)
+	);`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tdb.db.Exec(`
+	CREATE TABLE IF NOT EXISTS template_hourly_counts (
+		template_id TEXT NOT NULL,
+		hour TEXT NOT NULL,         -- "2025-11-24 13"
+		count INTEGER NOT NULL DEFAULT 1,
+
+		PRIMARY KEY (template_id, hour)
+	);`)
+	if err != nil {
+		return err
+	}
+	slog.Debug("All tables created successfully")
+	return nil
 }
 
 func (tdb *TemplateDB) SaveTemplate(t common.Template) error {
