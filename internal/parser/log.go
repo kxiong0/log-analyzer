@@ -3,26 +3,43 @@ package parser
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log/slog"
 	"strings"
 
 	common "log-analyzer/internal/common"
+	db "log-analyzer/internal/db"
 )
 
 var logFieldAlias = []string{"message", "msg", "log"}
 
-func NewLogParser() *LogParser {
-	return &LogParser{
+const (
+	databaseFile = "data.db"
+)
+
+func NewLogParser() (*LogParser, error) {
+	lp := &LogParser{
 		tt: make(common.TemplateTree),
 	}
+
+	// Init db
+	tdb, err := db.NewTemplateDB(databaseFile)
+	if err != nil {
+		return nil, err
+	}
+	lp.tdb = tdb
+	lp.LoadTemplates()
+
+	return lp, nil
 }
 
 type LogParser struct {
-	tt common.TemplateTree
+	tt  common.TemplateTree
+	tdb *db.TemplateDB
 }
 
-func (lp LogParser) ParseLog(s string) []string {
+func (lp LogParser) ParseLog(s string) string {
 	// Try to parse incoming log as a JSON string
+	// Returns template ID of the parsed log
 	rawLog, err := parseJsonLog(s)
 	if err != nil {
 		rawLog = string(s)
@@ -34,13 +51,14 @@ func (lp LogParser) ParseLog(s string) []string {
 		tokens[i] = postNormalize(token)
 	}
 
+	// Create new template if no template found
 	tid, ok := lp.tt.Find(tokens)
 	if !ok {
 		tid = lp.tt.Save(tokens)
+		lp.tdb.SaveTemplate(common.Template{ID: tid, Tokens: tokens})
 	}
 
-	fmt.Println("template id of tokens:", tid)
-	return tokens
+	return tid
 }
 
 // Try to parse a string as a json string and return the raw log line
@@ -81,4 +99,20 @@ func postNormalize(s string) string {
 		s = rule.Pattern.ReplaceAllString(s, rule.Token)
 	}
 	return s
+}
+
+// Load templates from DB
+func (lp *LogParser) LoadTemplates() error {
+	slog.Debug("Loading templates from DB...")
+
+	templates, err := lp.tdb.GetAllTemplates()
+	if err != nil {
+		slog.Error("Failed to get templates from DB: ", slog.Any("error", err))
+		return err
+	}
+
+	for _, t := range templates {
+		lp.tt[len(t.Tokens)] = append(lp.tt[len(t.Tokens)], t)
+	}
+	return nil
 }

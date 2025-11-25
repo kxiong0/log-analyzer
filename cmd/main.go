@@ -1,12 +1,18 @@
 package main
 
 import (
-	handlers "log-analyzer/internal/handlers"
+	"log"
+	server "log-analyzer/internal/server"
 	"net/http"
 )
 
 func main() {
-	s := handlers.NewServer()
+	s, err := server.NewServer()
+	if err != nil {
+		log.Fatalf("Failed to start server: %s", err)
+	}
 	http.HandleFunc("/ingest", s.Ingest)
-	http.ListenAndServe(":8080", nil)
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal(err)
+	}
 }

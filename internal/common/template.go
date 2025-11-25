@@ -1,7 +1,6 @@
 package common
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -28,7 +27,6 @@ func (tt TemplateTree) Save(tokens []string) string {
 	// Create new template and return its UUID
 	t := Template{ID: uuid.NewString(), Tokens: tokens}
 	tt[len(tokens)] = append(tt[len(tokens)], t)
-	fmt.Println("Added template ", tokens, " to len ", len(tokens))
 	return t.ID
 }
 

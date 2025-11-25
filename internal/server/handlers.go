@@ -1,32 +1,18 @@
-package ingest
+package server
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
+	common "log-analyzer/internal/common"
+	"log/slog"
 	"net/http"
 	"os"
-
-	common "log-analyzer/internal/common"
-	p "log-analyzer/internal/parser"
 )
-
-const (
-	outputFile = "access.log"
-)
-
-func NewServer() *Server {
-	s := Server{
-		lp: *p.NewLogParser(),
-	}
-	return &s
-}
-
-type Server struct {
-	lp p.LogParser
-}
 
 func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
+	slog.Debug("Received request to ingest logs")
+
 	bodyBytes, err := io.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
@@ -49,9 +35,9 @@ func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, le := range logs {
-		tokens := s.lp.ParseLog(le.Log)
+		tid := s.lp.ParseLog(le.Log)
 		lstr := fmt.Sprintln("raw log", le.Log)
-		lstr += fmt.Sprintln("tokens: ", tokens)
+		lstr += fmt.Sprintln("template id: ", tid)
 		if _, err := f.Write([]byte(lstr + "\n")); err != nil {
 			http.Error(w, "failed to write to file", http.StatusBadRequest)
 			return
