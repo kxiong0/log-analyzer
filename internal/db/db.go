@@ -157,6 +157,16 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 		return err
 	}
 
+	// Update hourly stat
+	_, err = tdb.db.Exec(`
+		UPDATE template_hourly_counts
+		SET count = count + 1
+		WHERE template_id = ? AND hour = ?
+	`, uuid, currentHour)
+	if err != nil {
+		return err
+	}
+
 	// Calculate IAT stats
 	row := tdb.db.QueryRow(`
 		SELECT total_count, iat_mean, iat_stddev, iat_last_timestamp
@@ -192,6 +202,7 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
