@@ -23,9 +23,15 @@ func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) (Anomaly, erro
 		return Anomaly{}, err
 	}
 
+	// Scaled-hour variance (simple heuristic)
+	minutes_elapsed := (time.Now().Minute()) / 60
+	expected_partial := mean * float64(minutes_elapsed)
+	var_partial := math.Pow(stddev, 2) * float64(minutes_elapsed)
+	std_partial := math.Sqrt(var_partial)
+
 	z := 0.0
-	if stddev != 0 {
-		z = math.Abs((float64(count) - mean) / stddev)
+	if std_partial != 0 {
+		z = (float64(count) - expected_partial) / std_partial
 	}
 
 	sev := SeverityInfo
