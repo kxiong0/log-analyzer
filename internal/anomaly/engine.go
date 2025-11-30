@@ -1,6 +1,7 @@
 package anomaly
 
 import (
+	"fmt"
 	db "log-analyzer/internal/db"
 	"log/slog"
 	"sync"
@@ -28,6 +29,9 @@ func NewAnomalyEngine() (*AnomalyEngine, error) {
 		return nil, err
 	}
 	ae.tdb = tdb
+
+	ae.AddAnomalyDetector(FrequencyDetector{})
+	return &ae, nil
 }
 
 func (ae *AnomalyEngine) AddAnomalyDetector(ad AnomalyDetector) {
@@ -37,9 +41,15 @@ func (ae *AnomalyEngine) AddAnomalyDetector(ad AnomalyDetector) {
 func (ae *AnomalyEngine) ProcessTemplate(tid string) {
 	// Iterate through all detectors
 	for _, d := range ae.detectors {
-		a := d.Check(tid)
+		a, err := d.Check(ae.tdb, tid)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Failed to process template %s: %s", tid, err))
+			continue
+		}
+
 		if a.Severity >= alertThreshold {
 			// TODO: send alert
+			slog.Warn(fmt.Sprintf("Triggered alerts - %s", a.Description))
 		}
 	}
 
@@ -64,4 +74,6 @@ func (ae *AnomalyEngine) updateTemplateStats(tid string) error {
 	}
 	ae.prevTid = tid
 	ae.prevTidMu.Unlock()
+
+	return nil
 }

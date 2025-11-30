@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
 	"log/slog"
 	"math"
 	"strings"
@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	timestampFormat = "2006-01-02 15:04:05"
-	hourTimeFormat  = "2006-01-02 15"
+	timestampFormat      = "2006-01-02 15:04:05"
+	hourTimeFormat       = "2006-01-02 15"
+	metricsLookbackHours = 24 * 7
 )
 
 func NewTemplateDB(dataSourceName string) (*TemplateDB, error) {
@@ -146,6 +147,49 @@ func (tdb *TemplateDB) GetAllTemplates() (map[int][]common.Template, error) {
 	return templates, nil
 }
 
+// Get mean and stddev of hourly counts from the past metricsLookbackHours hours
+func (tdb *TemplateDB) GetHourlyStats(tid string) (mean float64, stddev float64, err error) {
+	cutoff := time.Now().UTC().Add(-time.Hour * metricsLookbackHours)
+	row := tdb.db.QueryRow(`
+		SELECT AVG(count), SQRT(
+            (COUNT(count) * SUM(count * count) - (SUM(count) * SUM(count))) / ((COUNT(count) - 1) * COUNT(count))
+        ) AS stddev
+		FROM template_hourly_counts
+		WHERE template_id = ? AND hour > ?
+	`, tid, cutoff)
+
+	var meanNull sql.NullFloat64
+	var stddevNull sql.NullFloat64
+	if err = row.Scan(&meanNull, &stddevNull); err != nil {
+		slog.Error("Failed to calculate mean and/or stddev of hourly counts")
+		return
+	}
+
+	mean = meanNull.Float64
+	stddev = stddevNull.Float64
+	return
+}
+
+func (tdb *TemplateDB) GetCurrHourlyCount(tid string) (int, error) {
+	currentHour := time.Now().UTC().Format(hourTimeFormat)
+	row := tdb.db.QueryRow(`
+		SELECT count
+		FROM template_hourly_counts
+		WHERE template_id = ? AND hour = ?;
+	`, tid, currentHour)
+
+	var count int
+	if err := row.Scan(&count); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		slog.Error("Failed to get current hourly count")
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func (tdb *TemplateDB) CountTemplate(uuid string) error {
 	// Insert new rows for new template
 	_, err := tdb.db.Exec(`
@@ -266,8 +310,6 @@ func (tdb *TemplateDB) CountTransition(prevId string, uuid string) error {
 	if len(prevId) == 0 || len(uuid) == 0 {
 		return nil
 	}
-
-	slog.Debug(fmt.Sprintf("Writing transition from %s to %s", prevId, uuid))
 
 	_, err := tdb.db.Exec(`
 		INSERT OR IGNORE INTO template_transitions (src_template_id, dst_template_id)

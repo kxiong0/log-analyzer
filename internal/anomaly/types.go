@@ -2,11 +2,12 @@ package anomaly
 
 import (
 	"fmt"
+	"log-analyzer/internal/db"
 	"time"
 )
 
 type Anomaly struct {
-	TemplateID  int64
+	TemplateID  string
 	Type        string
 	Severity    Severity
 	Description string
@@ -56,5 +57,5 @@ func SeverityFromScore(score float64) Severity {
 }
 
 type AnomalyDetector interface {
-	Check(tid string) Anomaly
+	Check(tdb *db.TemplateDB, tid string) (Anomaly, error)
 }
