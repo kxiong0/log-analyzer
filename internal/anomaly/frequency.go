@@ -24,9 +24,9 @@ func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) (Anomaly, erro
 	}
 
 	// Scaled-hour variance (simple heuristic)
-	minutes_elapsed := (time.Now().Minute()) / 60
-	expected_partial := mean * float64(minutes_elapsed)
-	var_partial := math.Pow(stddev, 2) * float64(minutes_elapsed)
+	minutes_elapsed := float64(time.Now().Minute()) / 60
+	expected_partial := mean * minutes_elapsed
+	var_partial := math.Pow(stddev, 2) * minutes_elapsed
 	std_partial := math.Sqrt(var_partial)
 
 	z := 0.0
@@ -44,7 +44,7 @@ func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) (Anomaly, erro
 		description = fmt.Sprintf("Z score for template %s is larger than 3", tid)
 	}
 
-	slog.Debug(fmt.Sprintf("z score: %f", z))
+	slog.Debug(fmt.Sprintf("z score: %f | minutes elapsed %f | var_partial %f | std_partial %f", z, minutes_elapsed, var_partial, std_partial))
 	return Anomaly{
 			TemplateID:  tid,
 			Type:        "frequency",
