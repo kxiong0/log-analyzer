@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	alertThreshold = SeverityMedium
-	databaseFile   = "data.db"
+	databaseFile = "data.db"
 )
 
 type AnomalyEngine struct {
@@ -48,14 +47,7 @@ func (ae *AnomalyEngine) ProcessTemplate(tid string) []Anomaly {
 			slog.Error(fmt.Sprintf("Failed to detect anomalies in template %s: %s", tid, err))
 			continue
 		}
-
-		for _, a := range as {
-			if a.Severity >= alertThreshold {
-				slog.Error(fmt.Sprintf("Alert triggered: %s", a.Description))
-
-				// TODO mark Anomaly Type as pending to be sent out
-			}
-		}
+		anomalies = append(anomalies, as...)
 	}
 
 	ae.updateTemplateStats(tid)

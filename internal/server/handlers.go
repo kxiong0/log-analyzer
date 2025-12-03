@@ -4,9 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	common "log-analyzer/internal/common"
+	"log-analyzer/internal/anomaly"
+	"log-analyzer/internal/common"
+	"log/slog"
 	"net/http"
-	"os"
+)
+
+const (
+	alertThreshold = anomaly.SeverityMedium
 )
 
 func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
@@ -24,29 +29,19 @@ func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// write output to a file for now
-	f, err := os.OpenFile(outputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		http.Error(w, "failed to write to file", http.StatusBadRequest)
-		return
-	}
-
 	for _, le := range logs {
 		tid, newTemplate := s.lp.ParseLog(le.Log)
 		if newTemplate {
+			// TODO mark AnomalyTypeNewTemplate as pending to be sent out
 			// TODO send alert for new Template
 		}
 
-		s.ae.ProcessTemplate(tid)
-
-		lstr := fmt.Sprintln("raw log", le.Log)
-		lstr += fmt.Sprintln("template id: ", tid)
-		if _, err := f.Write([]byte(lstr + "\n")); err != nil {
-			http.Error(w, "failed to write to file", http.StatusBadRequest)
-			return
+		anomalies := s.ae.ProcessTemplate(tid)
+		for _, a := range anomalies {
+			if a.Severity >= alertThreshold {
+				slog.Error(fmt.Sprintf("Alert triggered: %s", a.Description))
+				// TODO mark Anomaly Type as pending to be sent out
+			}
 		}
-	}
-	if err := f.Close(); err != nil {
-		http.Error(w, "failed to close file", http.StatusBadRequest)
 	}
 }

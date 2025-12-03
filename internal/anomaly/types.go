@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+type AnomalyDetector interface {
+	Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error)
+}
+
 type Anomaly struct {
 	TemplateID  string
 	Type        AnomalyType
@@ -17,7 +21,8 @@ type Anomaly struct {
 type AnomalyType int
 
 const (
-	AnomalyTypeFrequency AnomalyType = iota
+	AnomalyTypeNewTemplate AnomalyType = iota
+	AnomalyTypeFrequency
 	AnomalyTypeSequence
 	AnomalyTypeTiming
 )
@@ -62,8 +67,4 @@ func SeverityFromZScore(score float64) Severity {
 		sev = SeverityLow
 	}
 	return sev
-}
-
-type AnomalyDetector interface {
-	Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error)
 }
