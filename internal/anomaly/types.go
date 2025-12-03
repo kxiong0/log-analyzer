@@ -57,5 +57,5 @@ func SeverityFromScore(score float64) Severity {
 }
 
 type AnomalyDetector interface {
-	Check(tdb *db.TemplateDB, tid string) (Anomaly, error)
+	Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error)
 }

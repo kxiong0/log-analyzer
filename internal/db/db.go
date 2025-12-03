@@ -3,9 +3,10 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
-	"math"
 	"strings"
+	"sync"
 	"time"
 
 	common "log-analyzer/internal/common"
@@ -39,6 +40,9 @@ func NewTemplateDB(dataSourceName string) (*TemplateDB, error) {
 
 type TemplateDB struct {
 	db *sql.DB
+
+	prevTid   string
+	prevTidMu sync.Mutex
 }
 
 // Create DB tables if they don't exist
@@ -190,143 +194,28 @@ func (tdb *TemplateDB) GetCurrHourlyCount(tid string) (int, error) {
 	return count, nil
 }
 
-func (tdb *TemplateDB) CountTemplate(uuid string) error {
-	// Insert new rows for new template
-	_, err := tdb.db.Exec(`
-		INSERT OR IGNORE INTO template_stats (template_id) VALUES (?);
-	`, uuid)
-	if err != nil {
-		return err
+// Get probability of transitioning from prevTid to the give tid
+func (tdb *TemplateDB) GetTransitionProbability(tid string) (float64, error) {
+	// Return 100% expected if there is no prev tid yet
+	if len(tdb.prevTid) == 0 {
+		return 1.0, nil
 	}
 
-	// Calculate IAT stats
+	tdb.prevTidMu.Lock()
+	defer tdb.prevTidMu.Unlock()
+
+	slog.Debug(fmt.Sprintf("tid %s prev tid %s", tid, tdb.prevTid))
 	row := tdb.db.QueryRow(`
-		SELECT total_count, iat_mean, iat_stddev, iat_last_timestamp
-		FROM template_stats
-		WHERE template_id = ?;
-	`, uuid)
+		SELECT count * 1.0 /
+				SUM(count) OVER (PARTITION BY src_template_id) AS probability
+		FROM template_transitions
+		WHERE src_template_id = ? AND dst_template_id = ?;
+	`, tdb.prevTid, tid)
 
-	var count int
-	var iatMean float64
-	var iatStddev float64
-	var iatLastTimestamp interface{}
-	err = row.Scan(&count, &iatMean, &iatStddev, &iatLastTimestamp)
-	if err != nil {
-		return err
+	var probability float64
+
+	if err := row.Scan(&probability); err != nil {
+		return 0.0, err
 	}
-
-	newMean, newStddev, err := calculateIAT(
-		iatLastTimestamp, iatMean, iatMean, count,
-	)
-	if err != nil {
-		return err
-	}
-
-	// Update stats
-	currTs := time.Now().UTC().Format(timestampFormat)
-	_, err = tdb.db.Exec(`
-		UPDATE template_stats
-		SET total_count = total_count + 1,
-			last_seen = ?,
-			iat_mean = ?,
-			iat_stddev = ?,
-			iat_last_timestamp = ?
-		WHERE template_id = ?
-	`, currTs, newMean, newStddev, currTs, uuid)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func calculateIAT(lastTimestamp interface{}, mean float64, stddev float64, count int) (float64, float64, error) {
-	newMean := 0.0
-	newStddev := 0.0
-	currTime := time.Now().UTC()
-	if lastTimestamp == nil {
-		// No previous data
-		lastTimestamp = currTime.Format(timestampFormat)
-	} else {
-		// Calculate new IAT stats
-		lastTime, err := time.Parse(timestampFormat, lastTimestamp.(string))
-		if err != nil {
-			return 0.0, 0.0, err
-		}
-
-		// Recover old M2
-		var oldM2 float64
-		if count >= 2 {
-			oldM2 = stddev * stddev * float64(count-1)
-		}
-
-		newCount := count + 1
-
-		// Welford update
-		iat := currTime.Sub(lastTime).Seconds()
-
-		// Calculate new mean
-		delta := iat - mean
-		newMean = mean + delta/float64(newCount)
-		delta2 := iat - newMean
-		newM2 := oldM2 + delta*delta2
-
-		// Calculate stddev
-		if count >= 2 {
-			variance := newM2 / float64(count-1)
-			newStddev = math.Sqrt(variance)
-		}
-	}
-	return newMean, newStddev, nil
-}
-
-// Update hourly count for template
-func (tdb *TemplateDB) CountTemplateHourly(uuid string) error {
-	// Insert new rows for new template
-	currentHour := time.Now().UTC().Format(hourTimeFormat)
-	_, err := tdb.db.Exec(`
-		INSERT OR IGNORE INTO template_hourly_counts (template_id, hour)
-		VALUES (?, ?);
-	`, uuid, currentHour)
-	if err != nil {
-		return err
-	}
-
-	_, err = tdb.db.Exec(`
-		UPDATE template_hourly_counts
-		SET count = count + 1
-		WHERE template_id = ? AND hour = ?
-	`, uuid, currentHour)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Increment count on template transition from template `prevId` to `uuid`
-func (tdb *TemplateDB) CountTransition(prevId string, uuid string) error {
-	// Ignore empty IDs
-	if len(prevId) == 0 || len(uuid) == 0 {
-		return nil
-	}
-
-	_, err := tdb.db.Exec(`
-		INSERT OR IGNORE INTO template_transitions (src_template_id, dst_template_id)
-		VALUES (?, ?);
-	`, prevId, uuid)
-	if err != nil {
-		return err
-	}
-
-	_, err = tdb.db.Exec(`
-		UPDATE template_transitions
-		SET count = count + 1
-		WHERE src_template_id = ? AND dst_template_id = ?
-	`, prevId, uuid)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return probability, nil
 }

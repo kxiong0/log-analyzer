@@ -38,8 +38,8 @@ type LogParser struct {
 }
 
 // Try to parse incoming log as a JSON string
-// Returns template ID of the parsed log
-func (lp *LogParser) ParseLog(s string) string {
+// Returns template ID of the parsed log and if a new template is created
+func (lp *LogParser) ParseLog(s string) (tid string, newTemplate bool) {
 	rawLog, err := parseJsonLog(s)
 	if err != nil {
 		rawLog = string(s)
@@ -57,7 +57,7 @@ func (lp *LogParser) ParseLog(s string) string {
 		tid = lp.tt.Save(tokens)
 		lp.tdb.SaveTemplate(common.Template{ID: tid, Tokens: tokens})
 	}
-	return tid
+	return tid, !ok
 }
 
 // Try to parse a string as a json string and return the raw log line

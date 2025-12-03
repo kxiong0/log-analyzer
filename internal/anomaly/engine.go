@@ -4,7 +4,6 @@ import (
 	"fmt"
 	db "log-analyzer/internal/db"
 	"log/slog"
-	"sync"
 )
 
 const (
@@ -15,9 +14,6 @@ const (
 type AnomalyEngine struct {
 	tdb       *db.TemplateDB
 	detectors []AnomalyDetector
-
-	prevTid   string
-	prevTidMu sync.Mutex
 }
 
 func NewAnomalyEngine() (*AnomalyEngine, error) {
@@ -31,6 +27,7 @@ func NewAnomalyEngine() (*AnomalyEngine, error) {
 	ae.tdb = tdb
 
 	ae.AddAnomalyDetector(FrequencyDetector{})
+	ae.AddAnomalyDetector(SequenceDetector{})
 	return &ae, nil
 }
 
@@ -38,22 +35,29 @@ func (ae *AnomalyEngine) AddAnomalyDetector(ad AnomalyDetector) {
 	ae.detectors = append(ae.detectors, ad)
 }
 
-func (ae *AnomalyEngine) ProcessTemplate(tid string) {
+// Process template through detectors to detect anomalies and update
+// template statistics
+// Return slice of anomalies detected
+func (ae *AnomalyEngine) ProcessTemplate(tid string) []Anomaly {
+	anomalies := []Anomaly{}
 	// Iterate through all detectors
 	for _, d := range ae.detectors {
-		a, err := d.Check(ae.tdb, tid)
+		as, err := d.Check(ae.tdb, tid)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to process template %s: %s", tid, err))
+			slog.Error(fmt.Sprintf("Failed to detect anomalies in template %s: %s", tid, err))
 			continue
 		}
 
-		if a.Severity >= alertThreshold {
-			// TODO: send alert
-			slog.Warn(fmt.Sprintf("Triggered alerts - %s", a.Description))
+		for _, a := range as {
+			if a.Severity >= alertThreshold {
+				slog.Error(fmt.Sprintf("Alert triggered: %s", a))
+			}
 		}
 	}
 
 	ae.updateTemplateStats(tid)
+
+	return anomalies
 }
 
 // Update template stats and increase count
@@ -67,13 +71,10 @@ func (ae *AnomalyEngine) updateTemplateStats(tid string) error {
 			"error", err)
 	}
 
-	ae.prevTidMu.Lock()
-	if err := ae.tdb.CountTransition(ae.prevTid, tid); err != nil {
+	if err := ae.tdb.CountTransition(tid); err != nil {
 		slog.Error("Failed to count template transition:",
 			"error", err)
 	}
-	ae.prevTid = tid
-	ae.prevTidMu.Unlock()
 
 	return nil
 }

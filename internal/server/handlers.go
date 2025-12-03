@@ -32,7 +32,11 @@ func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, le := range logs {
-		tid := s.lp.ParseLog(le.Log)
+		tid, newTemplate := s.lp.ParseLog(le.Log)
+		if newTemplate {
+			// TODO send alert for new Template
+		}
+
 		s.ae.ProcessTemplate(tid)
 
 		lstr := fmt.Sprintln("raw log", le.Log)

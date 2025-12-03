@@ -10,7 +10,7 @@ import (
 
 type FrequencyDetector struct{}
 
-func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) (Anomaly, error) {
+func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error) {
 	mean, stddev, err := tdb.GetHourlyStats(tid)
 	slog.Info("hourly stats",
 		"mean", mean,
@@ -20,7 +20,7 @@ func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) (Anomaly, erro
 
 	count, err := tdb.GetCurrHourlyCount(tid)
 	if err != nil {
-		return Anomaly{}, err
+		return nil, err
 	}
 
 	// Scaled-hour variance (simple heuristic)
@@ -34,23 +34,18 @@ func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) (Anomaly, erro
 		z = (float64(count) - expected_partial) / std_partial
 	}
 
-	sev := SeverityInfo
-	description := ""
+	anomalies := []Anomaly{}
+	anomaly := Anomaly{TemplateID: tid, Type: "frequency", Timestamp: time.Now()}
 	if z >= 4 {
-		sev = SeverityCritical
-		description = fmt.Sprintf("Z score for template %s is larger than 4", tid)
+		anomaly.Severity = SeverityHigh
+		anomaly.Description = fmt.Sprintf("Z score for template %s is larger than 4", tid)
+		anomalies = append(anomalies, anomaly)
 	} else if z >= 3 {
-		sev = SeverityHigh
-		description = fmt.Sprintf("Z score for template %s is larger than 3", tid)
+		anomaly.Severity = SeverityMedium
+		anomaly.Description = fmt.Sprintf("Z score for template %s is larger than 3", tid)
+		anomalies = append(anomalies, anomaly)
 	}
 
-	slog.Debug(fmt.Sprintf("z score: %f | minutes elapsed %f | var_partial %f | std_partial %f", z, minutes_elapsed, var_partial, std_partial))
-	return Anomaly{
-			TemplateID:  tid,
-			Type:        "frequency",
-			Description: description,
-			Severity:    sev,
-			Timestamp:   time.Now(),
-		},
+	return anomalies,
 		nil
 }
