@@ -28,6 +28,7 @@ func NewAnomalyEngine() (*AnomalyEngine, error) {
 
 	ae.AddAnomalyDetector(FrequencyDetector{})
 	ae.AddAnomalyDetector(SequenceDetector{})
+	ae.AddAnomalyDetector(TimingDetector{})
 	return &ae, nil
 }
 

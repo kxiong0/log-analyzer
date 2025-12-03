@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -15,7 +14,7 @@ import (
 )
 
 const (
-	timestampFormat      = "2006-01-02 15:04:05"
+	TimestampFormat      = "2006-01-02 15:04:05"
 	hourTimeFormat       = "2006-01-02 15"
 	metricsLookbackHours = 24 * 7
 )
@@ -204,7 +203,6 @@ func (tdb *TemplateDB) GetTransitionProbability(tid string) (float64, error) {
 	tdb.prevTidMu.Lock()
 	defer tdb.prevTidMu.Unlock()
 
-	slog.Debug(fmt.Sprintf("tid %s prev tid %s", tid, tdb.prevTid))
 	row := tdb.db.QueryRow(`
 		SELECT count * 1.0 /
 				SUM(count) OVER (PARTITION BY src_template_id) AS probability

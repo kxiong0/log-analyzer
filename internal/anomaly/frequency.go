@@ -12,11 +12,9 @@ type FrequencyDetector struct{}
 
 func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error) {
 	mean, stddev, err := tdb.GetHourlyStats(tid)
-	slog.Info("hourly stats",
-		"mean", mean,
-		"stddev", stddev,
-		"err", err,
-	)
+	if err != nil {
+		return nil, err
+	}
 
 	count, err := tdb.GetCurrHourlyCount(tid)
 	if err != nil {
@@ -34,18 +32,15 @@ func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, er
 		z = (float64(count) - expected_partial) / std_partial
 	}
 
-	anomalies := []Anomaly{}
-	anomaly := Anomaly{TemplateID: tid, Type: "frequency", Timestamp: time.Now()}
-	if z >= 4 {
-		anomaly.Severity = SeverityHigh
-		anomaly.Description = fmt.Sprintf("Z score for template %s is larger than 4", tid)
-		anomalies = append(anomalies, anomaly)
-	} else if z >= 3 {
-		anomaly.Severity = SeverityMedium
-		anomaly.Description = fmt.Sprintf("Z score for template %s is larger than 3", tid)
-		anomalies = append(anomalies, anomaly)
+	slog.Debug(fmt.Sprintf("Template: %s | Frequency Z score: %f", tid, z))
+
+	sev := SeverityFromZScore(z)
+	if sev > SeverityInfo {
+		anomaly := Anomaly{TemplateID: tid, Type: "frequency", Timestamp: time.Now()}
+		anomaly.Description = fmt.Sprintf("Abnormal latency spike detected for template %s: IAT deviates significantly from baseline (Z = %f)", tid, z)
+		anomalies := []Anomaly{anomaly}
+		return anomalies, nil
 	}
 
-	return anomalies,
-		nil
+	return []Anomaly{}, nil
 }

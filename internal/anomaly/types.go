@@ -41,19 +41,19 @@ func (s Severity) String() string {
 	}
 }
 
-func SeverityFromScore(score float64) Severity {
+func SeverityFromZScore(score float64) Severity {
+	sev := SeverityInfo
 	switch {
-	case score < 0.25:
-		return SeverityInfo
-	case score < 0.5:
-		return SeverityLow
-	case score < 0.7:
-		return SeverityMedium
-	case score < 0.9:
-		return SeverityHigh
-	default:
-		return SeverityCritical
+	case score >= 5.0:
+		sev = SeverityCritical
+	case score >= 4.0:
+		sev = SeverityHigh
+	case score >= 3.0:
+		sev = SeverityMedium
+	case score >= 2.0:
+		sev = SeverityLow
 	}
+	return sev
 }
 
 type AnomalyDetector interface {

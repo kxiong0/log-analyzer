@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"math"
 	"time"
 )
@@ -16,30 +17,20 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 	}
 
 	// Calculate IAT stats
-	row := tdb.db.QueryRow(`
-		SELECT total_count, iat_mean, iat_stddev, iat_last_timestamp
-		FROM template_stats
-		WHERE template_id = ?;
-	`, uuid)
-
-	var count int
-	var iatMean float64
-	var iatStddev float64
-	var iatLastTimestamp interface{}
-	err = row.Scan(&count, &iatMean, &iatStddev, &iatLastTimestamp)
+	count, iatMean, iatStddev, iatLastTimestamp, err := tdb.GetIATStats(uuid)
 	if err != nil {
 		return err
 	}
 
 	newMean, newStddev, err := calculateIAT(
-		iatLastTimestamp, iatMean, iatMean, count,
+		iatLastTimestamp, iatMean, iatStddev, count,
 	)
 	if err != nil {
 		return err
 	}
 
 	// Update stats
-	currTs := time.Now().UTC().Format(timestampFormat)
+	currTs := time.Now().UTC().Format(TimestampFormat)
 	_, err = tdb.db.Exec(`
 		UPDATE template_stats
 		SET total_count = total_count + 1,
@@ -56,16 +47,34 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 	return nil
 }
 
+// Fetch IAT stats for uuid
+func (tdb *TemplateDB) GetIATStats(uuid string) (count int, mean float64, stddev float64, lastTs string, err error) {
+	row := tdb.db.QueryRow(`
+		SELECT total_count, iat_mean, iat_stddev, iat_last_timestamp
+		FROM template_stats
+		WHERE template_id = ?;
+	`, uuid)
+
+	var iatLastTimestamp sql.NullString
+	err = row.Scan(&count, &mean, &stddev, &iatLastTimestamp)
+	if err != nil {
+		return
+	}
+
+	lastTs = iatLastTimestamp.String
+	return
+}
+
 func calculateIAT(lastTimestamp interface{}, mean float64, stddev float64, count int) (float64, float64, error) {
 	newMean := 0.0
 	newStddev := 0.0
 	currTime := time.Now().UTC()
 	if lastTimestamp == nil {
 		// No previous data
-		lastTimestamp = currTime.Format(timestampFormat)
+		lastTimestamp = currTime.Format(TimestampFormat)
 	} else {
 		// Calculate new IAT stats
-		lastTime, err := time.Parse(timestampFormat, lastTimestamp.(string))
+		lastTime, err := time.Parse(TimestampFormat, lastTimestamp.(string))
 		if err != nil {
 			return 0.0, 0.0, err
 		}

@@ -3,6 +3,7 @@ package anomaly
 import (
 	"fmt"
 	db "log-analyzer/internal/db"
+	"log/slog"
 )
 
 const (
@@ -16,6 +17,8 @@ func (sd SequenceDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, err
 	if err != nil {
 		return nil, err
 	}
+
+	slog.Debug(fmt.Sprintf("Template: %s | Sequence probability: %f", tid, probability))
 
 	if probability < probabilityThreshold {
 		return []Anomaly{{
