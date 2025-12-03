@@ -8,11 +8,19 @@ import (
 
 type Anomaly struct {
 	TemplateID  string
-	Type        string
+	Type        AnomalyType
 	Severity    Severity
 	Description string
 	Timestamp   time.Time
 }
+
+type AnomalyType int
+
+const (
+	AnomalyTypeFrequency AnomalyType = iota
+	AnomalyTypeSequence
+	AnomalyTypeTiming
+)
 
 type Severity int
 

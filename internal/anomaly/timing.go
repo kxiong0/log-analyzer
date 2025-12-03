@@ -27,7 +27,7 @@ func (td TimingDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error
 
 	sev := SeverityFromZScore(z)
 	if sev > SeverityInfo {
-		anomaly := Anomaly{TemplateID: tid, Type: "timing", Timestamp: time.Now()}
+		anomaly := Anomaly{TemplateID: tid, Type: AnomalyTypeTiming, Severity: sev, Timestamp: time.Now()}
 		anomaly.Description = fmt.Sprintf("Abnormal latency spike detected for template %s: IAT deviates significantly from baseline (Z = %f)", tid, z)
 		anomalies := []Anomaly{anomaly}
 		return anomalies, nil

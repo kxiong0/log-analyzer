@@ -51,7 +51,9 @@ func (ae *AnomalyEngine) ProcessTemplate(tid string) []Anomaly {
 
 		for _, a := range as {
 			if a.Severity >= alertThreshold {
-				slog.Error(fmt.Sprintf("Alert triggered: %s", a))
+				slog.Error(fmt.Sprintf("Alert triggered: %s", a.Description))
+
+				// TODO mark Anomaly Type as pending to be sent out
 			}
 		}
 	}

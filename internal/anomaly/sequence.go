@@ -23,7 +23,7 @@ func (sd SequenceDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, err
 	if probability < probabilityThreshold {
 		return []Anomaly{{
 				TemplateID:  tid,
-				Type:        "sequence",
+				Type:        AnomalyTypeSequence,
 				Severity:    SeverityMedium,
 				Description: fmt.Sprintf("detected unusual transition of probability %f", probability),
 			}},
