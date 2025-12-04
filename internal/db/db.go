@@ -226,7 +226,3 @@ func (tdb *TemplateDB) GetTransitionProbability(tid string) (float64, error) {
 	}
 	return probability, nil
 }
-
-func (tdb *TemplateDB) GetPrevTID() string {
-	return tdb.prevTid
-}
