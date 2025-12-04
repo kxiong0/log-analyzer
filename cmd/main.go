@@ -9,6 +9,7 @@ import (
 
 func setupLogging() {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
+	// slog.SetLogLoggerLevel(slog.LevelInfo)
 }
 
 func main() {

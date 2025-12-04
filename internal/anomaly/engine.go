@@ -6,23 +6,13 @@ import (
 	"log/slog"
 )
 
-const (
-	databaseFile = "data.db"
-)
-
 type AnomalyEngine struct {
 	tdb       *db.TemplateDB
 	detectors []AnomalyDetector
 }
 
-func NewAnomalyEngine() (*AnomalyEngine, error) {
+func NewAnomalyEngine(tdb *db.TemplateDB) (*AnomalyEngine, error) {
 	ae := AnomalyEngine{}
-
-	// Init DB
-	tdb, err := db.NewTemplateDB(databaseFile)
-	if err != nil {
-		return nil, err
-	}
 	ae.tdb = tdb
 
 	ae.AddAnomalyDetector(FrequencyDetector{})

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -24,10 +25,17 @@ func NewTemplateDB(dataSourceName string) (*TemplateDB, error) {
 	tdb := TemplateDB{}
 
 	// Open DB
-	db, err := sql.Open("sqlite", dataSourceName)
+	dataSource := fmt.Sprintf("file:%s?cache=shared&_busy_timeout=5000&_journal_mode=WAL", dataSourceName)
+	db, err := sql.Open("sqlite", dataSource)
 	if err != nil {
 		return nil, err
 	}
+
+	// Enable WAL mode for better concurrency
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		return nil, err
+	}
+
 	tdb.db = db
 	slog.Info("Connected to template DB")
 
@@ -129,6 +137,8 @@ func (tdb *TemplateDB) GetAllTemplates() (map[int][]common.Template, error) {
 		return nil, sql.ErrConnDone
 	}
 
+	defer rows.Close()
+
 	templates := make(map[int][]common.Template)
 	for rows.Next() {
 		var uuid string
@@ -204,16 +214,19 @@ func (tdb *TemplateDB) GetTransitionProbability(tid string) (float64, error) {
 	defer tdb.prevTidMu.Unlock()
 
 	row := tdb.db.QueryRow(`
-		SELECT count * 1.0 /
-				SUM(count) OVER (PARTITION BY src_template_id) AS probability
-		FROM template_transitions
-		WHERE src_template_id = ? AND dst_template_id = ?;
-	`, tdb.prevTid, tid)
+	SELECT 
+		CAST(COUNT(CASE WHEN src_template_id = ? AND dst_template_id = ? THEN 1 END) AS FLOAT) / 
+		COUNT(CASE WHEN dst_template_id = ? THEN 1 END) AS probability
+	FROM template_transitions;
+	`, tdb.prevTid, tid, tid)
 
 	var probability float64
-
 	if err := row.Scan(&probability); err != nil {
 		return 0.0, err
 	}
 	return probability, nil
+}
+
+func (tdb *TemplateDB) GetPrevTID() string {
+	return tdb.prevTid
 }

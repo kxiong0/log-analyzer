@@ -32,6 +32,7 @@ func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
 	for _, le := range logs {
 		tid, newTemplate := s.lp.ParseLog(le.Log)
 		if newTemplate {
+			slog.Debug(fmt.Sprintf("New template detected: %s", tid))
 			// TODO mark AnomalyTypeNewTemplate as pending to be sent out
 			// TODO send alert for new Template
 		}

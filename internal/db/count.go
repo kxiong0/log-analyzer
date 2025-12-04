@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"math"
 	"time"
 )
@@ -13,20 +14,20 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 		INSERT OR IGNORE INTO template_stats (template_id) VALUES (?);
 	`, uuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert new template stats row: %s", err)
 	}
 
 	// Calculate IAT stats
 	count, iatMean, iatStddev, iatLastTimestamp, err := tdb.GetIATStats(uuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get IAT stats: %s", err)
 	}
 
 	newMean, newStddev, err := calculateIAT(
 		iatLastTimestamp, iatMean, iatStddev, count,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to calculate IAT stats: %s", err)
 	}
 
 	// Update stats
@@ -41,7 +42,7 @@ func (tdb *TemplateDB) CountTemplate(uuid string) error {
 		WHERE template_id = ?
 	`, currTs, newMean, newStddev, currTs, uuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update stats: %s", err)
 	}
 
 	return nil
@@ -65,43 +66,44 @@ func (tdb *TemplateDB) GetIATStats(uuid string) (count int, mean float64, stddev
 	return
 }
 
-func calculateIAT(lastTimestamp interface{}, mean float64, stddev float64, count int) (float64, float64, error) {
+func calculateIAT(lastTimestamp string, mean float64, stddev float64, count int) (float64, float64, error) {
+	// No previous timestamp
+	if len(lastTimestamp) == 0 {
+		return mean, stddev, nil
+	}
+
+	// Calculate new IAT stats
+	lastTime, err := time.Parse(TimestampFormat, lastTimestamp)
+	if err != nil {
+		return 0.0, 0.0, err
+	}
+
+	// Recover old M2
+	var oldM2 float64
+	if count >= 2 {
+		oldM2 = stddev * stddev * float64(count-1)
+	}
+
+	newCount := count + 1
+
+	// Welford update
+	iat := time.Now().UTC().Sub(lastTime).Seconds()
+
+	// Calculate new mean
 	newMean := 0.0
 	newStddev := 0.0
-	currTime := time.Now().UTC()
-	if lastTimestamp == nil {
-		// No previous data
-		lastTimestamp = currTime.Format(TimestampFormat)
-	} else {
-		// Calculate new IAT stats
-		lastTime, err := time.Parse(TimestampFormat, lastTimestamp.(string))
-		if err != nil {
-			return 0.0, 0.0, err
-		}
 
-		// Recover old M2
-		var oldM2 float64
-		if count >= 2 {
-			oldM2 = stddev * stddev * float64(count-1)
-		}
+	delta := iat - mean
+	newMean = mean + delta/float64(newCount)
+	delta2 := iat - newMean
+	newM2 := oldM2 + delta*delta2
 
-		newCount := count + 1
-
-		// Welford update
-		iat := currTime.Sub(lastTime).Seconds()
-
-		// Calculate new mean
-		delta := iat - mean
-		newMean = mean + delta/float64(newCount)
-		delta2 := iat - newMean
-		newM2 := oldM2 + delta*delta2
-
-		// Calculate stddev
-		if count >= 2 {
-			variance := newM2 / float64(count-1)
-			newStddev = math.Sqrt(variance)
-		}
+	// Calculate stddev
+	if count >= 2 {
+		variance := newM2 / float64(count-1)
+		newStddev = math.Sqrt(variance)
 	}
+
 	return newMean, newStddev, nil
 }
 

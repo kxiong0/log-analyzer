@@ -16,14 +16,8 @@ const (
 	databaseFile = "data.db"
 )
 
-func NewLogParser() (*LogParser, error) {
+func NewLogParser(tdb *db.TemplateDB) (*LogParser, error) {
 	lp := &LogParser{}
-
-	// Init DB
-	tdb, err := db.NewTemplateDB(databaseFile)
-	if err != nil {
-		return nil, err
-	}
 	lp.tdb = tdb
 
 	// Fetch template tree from DB

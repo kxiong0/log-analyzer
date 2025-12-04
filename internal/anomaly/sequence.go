@@ -18,7 +18,7 @@ func (sd SequenceDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, err
 		return nil, err
 	}
 
-	slog.Debug(fmt.Sprintf("Template: %s | Sequence probability: %f", tid, probability))
+	slog.Debug(fmt.Sprintf("Template: %s | prev Template: %s | Sequence probability: %f", tid, tdb.GetPrevTID(), probability))
 
 	if probability < probabilityThreshold {
 		return []Anomaly{{
