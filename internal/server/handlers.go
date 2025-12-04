@@ -30,14 +30,14 @@ func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, le := range logs {
-		tid, newTemplate := s.lp.ParseLog(le.Log)
+		tmpl, newTemplate := s.lp.ParseLog(le.Log)
 		if newTemplate {
-			slog.Debug(fmt.Sprintf("New template detected: %s", tid))
+			slog.Debug(fmt.Sprintf("New template detected: %s", tmpl.ID))
 			// TODO mark AnomalyTypeNewTemplate as pending to be sent out
 			// TODO send alert for new Template
 		}
 
-		anomalies := s.ae.ProcessTemplate(tid)
+		anomalies := s.ae.ProcessTemplate(tmpl)
 		for _, a := range anomalies {
 			if a.Severity >= alertThreshold {
 				slog.Error(fmt.Sprintf("Alert triggered: %s", a.Description))

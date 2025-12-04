@@ -7,27 +7,28 @@ import (
 )
 
 type Template struct {
-	ID     string   // uuid
-	Tokens []string // the canonical pattern: ["GET", "<NUM>", "users", "<UUID>"]
+	ID          string // uuid
+	K8sMetadata K8sMetadata
+	Tokens      []string // the canonical pattern: ["GET", "<NUM>", "users", "<UUID>"]
 }
 
 type TemplateTree map[int][]Template // key = token_count
 
-func (tt TemplateTree) Find(tokens []string) (string, bool) {
+func (tt TemplateTree) Find(tokens []string) (Template, bool) {
 	candidates := tt[len(tokens)]
 	for _, tmpl := range candidates {
 		if matchesTemplate(tokens, tmpl.Tokens) {
-			return tmpl.ID, true
+			return tmpl, true
 		}
 	}
-	return "", false
+	return Template{}, false
 }
 
-func (tt TemplateTree) Save(tokens []string) string {
+func (tt TemplateTree) Save(tokens []string) Template {
 	// Create new template and return its UUID
 	t := Template{ID: uuid.NewString(), Tokens: tokens}
 	tt[len(tokens)] = append(tt[len(tokens)], t)
-	return t.ID
+	return t
 }
 
 func matchesTemplate(tokens, tmpl []string) bool {

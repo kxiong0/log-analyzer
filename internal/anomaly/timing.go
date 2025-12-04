@@ -2,6 +2,7 @@ package anomaly
 
 import (
 	"fmt"
+	"log-analyzer/internal/common"
 	db "log-analyzer/internal/db"
 	"log/slog"
 	"time"
@@ -9,8 +10,8 @@ import (
 
 type TimingDetector struct{}
 
-func (td TimingDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error) {
-	_, mean, stddev, ts, err := tdb.GetIATStats(tid)
+func (td TimingDetector) Check(tdb *db.TemplateDB, tmpl common.Template) ([]Anomaly, error) {
+	_, mean, stddev, ts, err := tdb.GetIATStats(tmpl.ID)
 	if err != nil {
 		return []Anomaly{}, err
 	}
@@ -23,12 +24,16 @@ func (td TimingDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error
 	iat := time.Since(lastTs).Seconds()
 	z := (iat - mean) / stddev
 
-	slog.Debug(fmt.Sprintf("Template: %s | Timing Z score: %f", tid, z))
+	slog.Debug(fmt.Sprintf("Template: %s | Timing Z score: %f", tmpl.ID, z))
 
 	sev := SeverityFromZScore(z)
 	if sev > SeverityInfo {
-		anomaly := Anomaly{TemplateID: tid, Type: AnomalyTypeTiming, Severity: sev, Timestamp: time.Now()}
-		anomaly.Description = fmt.Sprintf("Abnormal latency spike detected for template %s: IAT deviates significantly from baseline (Z = %f)", tid, z)
+		anomaly := Anomaly{TemplateID: tmpl.ID, Type: AnomalyTypeTiming, Severity: sev, Timestamp: time.Now()}
+		anomaly.Description = fmt.Sprintf(
+			"Abnormal latency spike detected for template %s: IAT deviates significantly from baseline (Z = %f)",
+			tmpl.ID,
+			z,
+		)
 		anomalies := []Anomaly{anomaly}
 		return anomalies, nil
 	}

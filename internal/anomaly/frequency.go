@@ -2,6 +2,7 @@ package anomaly
 
 import (
 	"fmt"
+	"log-analyzer/internal/common"
 	"log-analyzer/internal/db"
 	"log/slog"
 	"math"
@@ -10,13 +11,13 @@ import (
 
 type FrequencyDetector struct{}
 
-func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error) {
-	mean, stddev, err := tdb.GetHourlyStats(tid)
+func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tmpl common.Template) ([]Anomaly, error) {
+	mean, stddev, err := tdb.GetHourlyStats(tmpl.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	count, err := tdb.GetCurrHourlyCount(tid)
+	count, err := tdb.GetCurrHourlyCount(tmpl.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -32,12 +33,15 @@ func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tid string) ([]Anomaly, er
 		z = (float64(count) - expected_partial) / std_partial
 	}
 
-	slog.Debug(fmt.Sprintf("Template: %s | Frequency Z score: %f", tid, z))
+	slog.Debug(fmt.Sprintf("Template: %s | Frequency Z score: %f", tmpl.ID, z))
 
 	sev := SeverityFromZScore(z)
 	if sev > SeverityInfo {
-		anomaly := Anomaly{TemplateID: tid, Type: AnomalyTypeFrequency, Severity: sev, Timestamp: time.Now()}
-		anomaly.Description = fmt.Sprintf("abnormal frequency spike detected for template %s: Frequency deviates significantly from baseline (Z = %f)", tid, z)
+		anomaly := Anomaly{TemplateID: tmpl.ID, Type: AnomalyTypeFrequency, Severity: sev, Timestamp: time.Now()}
+		anomaly.Description = fmt.Sprintf(
+			"abnormal frequency spike detected for template %s: Frequency deviates significantly from baseline (Z = %f)",
+			tmpl.ID, z,
+		)
 		anomalies := []Anomaly{anomaly}
 		return anomalies, nil
 	}

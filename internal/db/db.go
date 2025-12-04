@@ -48,8 +48,8 @@ func NewTemplateDB(dataSourceName string) (*TemplateDB, error) {
 type TemplateDB struct {
 	db *sql.DB
 
-	prevTid   string
-	prevTidMu sync.Mutex
+	prevTids   map[string]string // pod ID to prev Template ID
+	prevTidsMu sync.RWMutex
 }
 
 // Create DB tables if they don't exist
@@ -204,21 +204,23 @@ func (tdb *TemplateDB) GetCurrHourlyCount(tid string) (int, error) {
 }
 
 // Get probability of transitioning from prevTid to the give tid
-func (tdb *TemplateDB) GetTransitionProbability(tid string) (float64, error) {
+func (tdb *TemplateDB) GetTransitionProbability(tid string, podId string) (float64, error) {
+	tdb.prevTidsMu.RLock()
+	defer tdb.prevTidsMu.RUnlock()
+
+	prevTid, ok := tdb.prevTids[podId]
+
 	// Return 100% expected if there is no prev tid yet
-	if len(tdb.prevTid) == 0 {
+	if !ok {
 		return 1.0, nil
 	}
-
-	tdb.prevTidMu.Lock()
-	defer tdb.prevTidMu.Unlock()
 
 	row := tdb.db.QueryRow(`
 	SELECT 
 		CAST(COUNT(CASE WHEN src_template_id = ? AND dst_template_id = ? THEN 1 END) AS FLOAT) / 
 		COUNT(CASE WHEN dst_template_id = ? THEN 1 END) AS probability
 	FROM template_transitions;
-	`, tdb.prevTid, tid, tid)
+	`, prevTid, tid, tid)
 
 	var probability float64
 	if err := row.Scan(&probability); err != nil {

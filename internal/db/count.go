@@ -132,22 +132,28 @@ func (tdb *TemplateDB) CountTemplateHourly(uuid string) error {
 }
 
 // Increment count on template transition from template `prevId` to `uuid`
-func (tdb *TemplateDB) CountTransition(uuid string) error {
+func (tdb *TemplateDB) CountTransition(uuid string, podId string) error {
 	// Update prevId to next template id before returning
-	defer func() { tdb.prevTid = uuid }()
+	defer func() {
+		tdb.prevTidsMu.Lock()
+		tdb.prevTids[podId] = uuid
+		tdb.prevTidsMu.Unlock()
+	}()
+
+	prevTid := tdb.prevTids[podId]
 
 	// Ignore empty IDs
-	if len(tdb.prevTid) == 0 || len(uuid) == 0 {
+	if len(prevTid) == 0 || len(uuid) == 0 {
 		return nil
 	}
 
-	tdb.prevTidMu.Lock()
-	defer tdb.prevTidMu.Unlock()
+	tdb.prevTidsMu.RLock()
+	defer tdb.prevTidsMu.RUnlock()
 
 	_, err := tdb.db.Exec(`
 		INSERT OR IGNORE INTO template_transitions (src_template_id, dst_template_id)
 		VALUES (?, ?);
-	`, tdb.prevTid, uuid)
+	`, prevTid, uuid)
 	if err != nil {
 		return err
 	}
@@ -156,7 +162,7 @@ func (tdb *TemplateDB) CountTransition(uuid string) error {
 		UPDATE template_transitions
 		SET count = count + 1
 		WHERE src_template_id = ? AND dst_template_id = ?
-	`, tdb.prevTid, uuid)
+	`, prevTid, uuid)
 
 	if err != nil {
 		return err

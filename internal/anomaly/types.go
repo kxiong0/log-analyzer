@@ -2,12 +2,13 @@ package anomaly
 
 import (
 	"fmt"
+	"log-analyzer/internal/common"
 	"log-analyzer/internal/db"
 	"time"
 )
 
 type AnomalyDetector interface {
-	Check(tdb *db.TemplateDB, tid string) ([]Anomaly, error)
+	Check(tdb *db.TemplateDB, tmpl common.Template) ([]Anomaly, error)
 }
 
 type Anomaly struct {

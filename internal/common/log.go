@@ -9,6 +9,7 @@ type LogEvent struct {
 
 type K8sMetadata struct {
 	PodName       string                 `json:"pod_name"`
+	PodID         string                 `json:"pod_id"`
 	Namespace     string                 `json:"namespace_name"`
 	Labels        map[string]interface{} `json:"labels"`
 	Annotations   map[string]interface{} `json:"annotations"`
