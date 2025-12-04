@@ -207,34 +207,46 @@ func (tdb *TemplateDB) GetCurrHourlyCount(tid string) (int, error) {
 	return count, nil
 }
 
-// Get probability of transitioning from prevTid to the give tid
-func (tdb *TemplateDB) GetTransitionProbability(tid string, podId string) (float64, error) {
+// Get total count of transitions to tid and count of transitioning from prevTid to the give tid
+func (tdb *TemplateDB) GetTransitionCounts(tid string, podId string) (totalCount int, transitionCount int, err error) {
 	tdb.prevTidsMu.RLock()
 	defer tdb.prevTidsMu.RUnlock()
 
 	prevTid, ok := tdb.prevTids[podId]
 
-	// Return 100% expected if there is no prev tid yet
+	// No prev tid yet
 	if !ok {
-		return 1.0, nil
+		return 0, 0, nil
 	}
 
 	row := tdb.db.QueryRow(`
-	SELECT 
-		CAST(COUNT(CASE WHEN src_template_id = ? AND dst_template_id = ? AND pod_id = ? THEN 1 END) AS FLOAT) / 
-		COUNT(CASE WHEN dst_template_id = ? AND pod_id = ? THEN 1 END) AS probability
-	FROM template_transitions;
-	`, prevTid, tid, podId, tid, podId)
+		SELECT 
+			COUNT(CASE WHEN src_template_id = ? AND dst_template_id = ? AND pod_id = ? THEN 1 END)
+		FROM template_transitions;
+	`, prevTid, tid, podId)
 
-	var probability sql.NullFloat64
-	if err := row.Scan(&probability); err != nil {
-		return 0.0, err
+	var tran sql.NullInt32
+	if err := row.Scan(&tran); err != nil {
+		return 0, 0, err
 	}
 
-	if probability.Valid {
-		return probability.Float64, nil
+	row = tdb.db.QueryRow(`
+		SELECT
+			COUNT(CASE WHEN dst_template_id = ? AND pod_id = ? THEN 1 END)
+		FROM template_transitions;
+	`, tid, podId)
+	var total sql.NullInt32
+	if err := row.Scan(&total); err != nil {
+		return 0, 0, err
+	}
+
+	if tran.Valid && total.Valid {
+		transitionCount = int(tran.Int32)
+		totalCount = int(tran.Int32)
 	} else {
 		// query is NULL when no such transition recorded yet
-		return 1.0, nil
+		return 0, 0, nil
 	}
+
+	return
 }
