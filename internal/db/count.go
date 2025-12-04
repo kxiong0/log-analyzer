@@ -151,9 +151,9 @@ func (tdb *TemplateDB) CountTransition(uuid string, podId string) error {
 	defer tdb.prevTidsMu.RUnlock()
 
 	_, err := tdb.db.Exec(`
-		INSERT OR IGNORE INTO template_transitions (src_template_id, dst_template_id)
-		VALUES (?, ?);
-	`, prevTid, uuid)
+		INSERT OR IGNORE INTO template_transitions (src_template_id, dst_template_id, pod_id)
+		VALUES (?, ?, ?);
+	`, prevTid, uuid, podId)
 	if err != nil {
 		return err
 	}
@@ -161,8 +161,8 @@ func (tdb *TemplateDB) CountTransition(uuid string, podId string) error {
 	_, err = tdb.db.Exec(`
 		UPDATE template_transitions
 		SET count = count + 1
-		WHERE src_template_id = ? AND dst_template_id = ?
-	`, prevTid, uuid)
+		WHERE src_template_id = ? AND dst_template_id = ? AND pod_id = ?
+	`, prevTid, uuid, podId)
 
 	if err != nil {
 		return err

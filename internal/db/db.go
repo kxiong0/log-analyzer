@@ -42,6 +42,9 @@ func NewTemplateDB(dataSourceName string) (*TemplateDB, error) {
 	// Init tables
 	tdb.InitTables()
 
+	// Init prev TID map
+	tdb.prevTids = make(map[string]string)
+
 	return &tdb, nil
 }
 
@@ -71,10 +74,11 @@ func (tdb *TemplateDB) InitTables() error {
 	CREATE TABLE IF NOT EXISTS template_transitions (
 		src_template_id TEXT NOT NULL,
 		dst_template_id TEXT NOT NULL,
+		pod_id TEXT NOT NULL,
 		count INTEGER NOT NULL DEFAULT 0,
 		last_seen TEXT DEFAULT CURRENT_TIMESTAMP,
 
-		PRIMARY KEY (src_template_id, dst_template_id),
+		PRIMARY KEY (src_template_id, dst_template_id, pod_id),
 
 		FOREIGN KEY (src_template_id) REFERENCES templates(uuid),
 		FOREIGN KEY (dst_template_id) REFERENCES templates(uuid)
@@ -217,14 +221,20 @@ func (tdb *TemplateDB) GetTransitionProbability(tid string, podId string) (float
 
 	row := tdb.db.QueryRow(`
 	SELECT 
-		CAST(COUNT(CASE WHEN src_template_id = ? AND dst_template_id = ? THEN 1 END) AS FLOAT) / 
-		COUNT(CASE WHEN dst_template_id = ? THEN 1 END) AS probability
+		CAST(COUNT(CASE WHEN src_template_id = ? AND dst_template_id = ? AND pod_id = ? THEN 1 END) AS FLOAT) / 
+		COUNT(CASE WHEN dst_template_id = ? AND pod_id = ? THEN 1 END) AS probability
 	FROM template_transitions;
-	`, prevTid, tid, tid)
+	`, prevTid, tid, podId, tid, podId)
 
-	var probability float64
+	var probability sql.NullFloat64
 	if err := row.Scan(&probability); err != nil {
 		return 0.0, err
 	}
-	return probability, nil
+
+	if probability.Valid {
+		return probability.Float64, nil
+	} else {
+		// query is NULL when no such transition recorded yet
+		return 1.0, nil
+	}
 }
