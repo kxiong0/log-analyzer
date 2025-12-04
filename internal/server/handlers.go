@@ -4,14 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log-analyzer/internal/anomaly"
 	"log-analyzer/internal/common"
 	"log/slog"
 	"net/http"
-)
-
-const (
-	alertThreshold = anomaly.SeverityMedium
 )
 
 func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
@@ -38,11 +33,6 @@ func (s *Server) Ingest(w http.ResponseWriter, req *http.Request) {
 		}
 
 		anomalies := s.ae.ProcessTemplate(tmpl)
-		for _, a := range anomalies {
-			if a.Severity >= alertThreshold {
-				slog.Error(fmt.Sprintf("Alert triggered: %s", a.Description))
-				// TODO mark Anomaly Type as pending to be sent out
-			}
-		}
+		s.ale.AddAnomalies(anomalies)
 	}
 }

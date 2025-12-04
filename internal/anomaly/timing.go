@@ -22,7 +22,6 @@ func (td TimingDetector) Check(tdb *db.TemplateDB, tmpl common.Template) ([]Anom
 	}
 
 	// Not enough data to calculate IAT z score yet, or that its meaningless
-	fmt.Println("mean", mean, "stddev", stddev)
 	if stddev == 0 {
 		return []Anomaly{}, nil
 	}
@@ -38,16 +37,13 @@ func (td TimingDetector) Check(tdb *db.TemplateDB, tmpl common.Template) ([]Anom
 	slog.Debug(fmt.Sprintf("Template: %s | Timing Z score: %f", tmpl.ID, z))
 
 	sev := SeverityFromZScore(z)
+	anomaly := Anomaly{TemplateID: tmpl.ID, Type: AnomalyTypeTiming, Severity: sev, Timestamp: time.Now()}
 	if sev > SeverityInfo {
-		anomaly := Anomaly{TemplateID: tmpl.ID, Type: AnomalyTypeTiming, Severity: sev, Timestamp: time.Now()}
 		anomaly.Description = fmt.Sprintf(
 			"Abnormal latency detected for template %s: IAT deviates significantly from baseline (Z = %f)",
 			tmpl.ID,
 			z,
 		)
-		anomalies := []Anomaly{anomaly}
-		return anomalies, nil
 	}
-
-	return []Anomaly{}, nil
+	return []Anomaly{anomaly}, nil
 }

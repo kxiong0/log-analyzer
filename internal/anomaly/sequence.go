@@ -5,6 +5,7 @@ import (
 	"log-analyzer/internal/common"
 	db "log-analyzer/internal/db"
 	"log/slog"
+	"time"
 )
 
 const (
@@ -21,14 +22,11 @@ func (sd SequenceDetector) Check(tdb *db.TemplateDB, tmpl common.Template) ([]An
 
 	slog.Debug(fmt.Sprintf("Template: %s | Sequence probability: %f", tmpl.ID, probability))
 
+	sev := SeverityInfo
+	anomaly := Anomaly{TemplateID: tmpl.ID, Type: AnomalyTypeSequence, Severity: sev, Timestamp: time.Now()}
 	if probability < probabilityThreshold {
-		return []Anomaly{{
-				TemplateID:  tmpl.ID,
-				Type:        AnomalyTypeSequence,
-				Severity:    SeverityMedium,
-				Description: fmt.Sprintf("detected unusual transition of probability %f", probability),
-			}},
-			nil
+		anomaly.Severity = SeverityMedium
+		anomaly.Description = fmt.Sprintf("detected unusual transition of probability %f", probability)
 	}
-	return []Anomaly{}, nil
+	return []Anomaly{anomaly}, nil
 }

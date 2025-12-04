@@ -12,10 +12,6 @@ import (
 
 var logFieldAlias = []string{"message", "msg", "log"}
 
-const (
-	databaseFile = "data.db"
-)
-
 func NewLogParser(tdb *db.TemplateDB) (*LogParser, error) {
 	lp := &LogParser{}
 	lp.tdb = tdb

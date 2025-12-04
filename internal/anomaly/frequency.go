@@ -36,15 +36,13 @@ func (fd FrequencyDetector) Check(tdb *db.TemplateDB, tmpl common.Template) ([]A
 	slog.Debug(fmt.Sprintf("Template: %s | Frequency Z score: %f", tmpl.ID, z))
 
 	sev := SeverityFromZScore(z)
+	anomaly := Anomaly{TemplateID: tmpl.ID, Type: AnomalyTypeFrequency, Severity: sev, Timestamp: time.Now()}
 	if sev > SeverityInfo {
-		anomaly := Anomaly{TemplateID: tmpl.ID, Type: AnomalyTypeFrequency, Severity: sev, Timestamp: time.Now()}
 		anomaly.Description = fmt.Sprintf(
 			"abnormal frequency spike detected for template %s: Frequency deviates significantly from baseline (Z = %f)",
 			tmpl.ID, z,
 		)
-		anomalies := []Anomaly{anomaly}
-		return anomalies, nil
 	}
 
-	return []Anomaly{}, nil
+	return []Anomaly{anomaly}, nil
 }

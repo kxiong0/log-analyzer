@@ -28,10 +28,26 @@ const (
 	AnomalyTypeTiming
 )
 
+func (at AnomalyType) String() string {
+	switch at {
+	case AnomalyTypeNewTemplate:
+		return "New Template"
+	case AnomalyTypeFrequency:
+		return "Frequency"
+	case AnomalyTypeSequence:
+		return "Sequence"
+	case AnomalyTypeTiming:
+		return "Timing"
+	default:
+		return fmt.Sprintf("unknown(%d)", at)
+	}
+}
+
 type Severity int
 
 const (
-	SeverityInfo Severity = iota
+	SeverityResolved Severity = iota
+	SeverityInfo
 	SeverityLow
 	SeverityMedium
 	SeverityHigh
@@ -40,6 +56,8 @@ const (
 
 func (s Severity) String() string {
 	switch s {
+	case SeverityResolved:
+		return "resolved"
 	case SeverityInfo:
 		return "info"
 	case SeverityLow:
