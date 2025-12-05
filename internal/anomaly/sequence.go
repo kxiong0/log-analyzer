@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	warmupThreshold      = 10
 	probabilityThreshold = 0.05
 )
 

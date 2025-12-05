@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+const (
+	timingCVFilter = 0.6 // stddev / mean threshold
+)
+
 type TimingDetector struct {
 	tdb *db.TemplateDB
 }
@@ -24,7 +28,7 @@ func (td TimingDetector) Start(done <-chan bool) error {
 }
 
 func (td TimingDetector) Check(tmpl common.Template) ([]Anomaly, error) {
-	_, mean, stddev, ts, err := td.tdb.GetIATStats(tmpl.ID)
+	count, mean, stddev, ts, err := td.tdb.GetIATStats(tmpl.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []Anomaly{}, nil
@@ -33,7 +37,12 @@ func (td TimingDetector) Check(tmpl common.Template) ([]Anomaly, error) {
 	}
 
 	// Not enough data to calculate IAT z score yet, or that its meaningless
-	if stddev == 0 {
+	if count < warmupThreshold || stddev == 0 {
+		return []Anomaly{}, nil
+	}
+
+	// Stats are too unstable to create alert
+	if stddev/mean > timingCVFilter {
 		return []Anomaly{}, nil
 	}
 
