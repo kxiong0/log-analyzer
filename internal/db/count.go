@@ -109,16 +109,12 @@ func calculateIAT(lastTimestamp string, mean float64, stddev float64, count int)
 
 // Update hourly count for template
 func (tdb *TemplateDB) CountTemplateHourly(uuid string) error {
-	// Insert new rows for new template
-	currentHour := time.Now().UTC().Format(hourTimeFormat)
-	_, err := tdb.db.Exec(`
-		INSERT OR IGNORE INTO template_hourly_counts (template_id, hour)
-		VALUES (?, ?);
-	`, uuid, currentHour)
+	err := tdb.InsertHourlyRow(uuid)
 	if err != nil {
 		return err
 	}
 
+	currentHour := time.Now().UTC().Format(hourTimeFormat)
 	_, err = tdb.db.Exec(`
 		UPDATE template_hourly_counts
 		SET count = count + 1
@@ -128,6 +124,19 @@ func (tdb *TemplateDB) CountTemplateHourly(uuid string) error {
 		return err
 	}
 
+	return nil
+}
+
+// Insert new hourly count row for new template
+func (tdb *TemplateDB) InsertHourlyRow(uuid string) error {
+	currentHour := time.Now().UTC().Format(hourTimeFormat)
+	_, err := tdb.db.Exec(`
+		INSERT OR IGNORE INTO template_hourly_counts (template_id, hour)
+		VALUES (?, ?);
+	`, uuid, currentHour)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

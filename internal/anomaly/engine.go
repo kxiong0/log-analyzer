@@ -16,9 +16,9 @@ func NewAnomalyEngine(tdb *db.TemplateDB) (*AnomalyEngine, error) {
 	ae := AnomalyEngine{}
 	ae.tdb = tdb
 
-	ae.AddAnomalyDetector(FrequencyDetector{})
-	ae.AddAnomalyDetector(SequenceDetector{})
-	ae.AddAnomalyDetector(TimingDetector{})
+	ae.AddAnomalyDetector(&FrequencyDetector{})
+	ae.AddAnomalyDetector(&SequenceDetector{})
+	ae.AddAnomalyDetector(&TimingDetector{})
 	return &ae, nil
 }
 
@@ -33,7 +33,7 @@ func (ae *AnomalyEngine) ProcessTemplate(tmpl common.Template) []Anomaly {
 	anomalies := []Anomaly{}
 	// Iterate through all detectors
 	for _, d := range ae.detectors {
-		as, err := d.Check(ae.tdb, tmpl)
+		as, err := d.Check(tmpl)
 		if err != nil {
 			slog.Error(fmt.Sprintf("Failed to detect anomalies in template %s: %s", tmpl.ID, err))
 			continue
@@ -62,5 +62,20 @@ func (ae *AnomalyEngine) updateTemplateStats(tmpl common.Template) error {
 			"error", err)
 	}
 
+	return nil
+}
+
+func (ae *AnomalyEngine) Start(done <-chan bool) error {
+	for _, d := range ae.detectors {
+		err := d.Init(ae.tdb)
+		if err != nil {
+			return fmt.Errorf("Detector failed to init detector %T", d)
+		}
+
+		err = d.Start(done)
+		if err != nil {
+			return fmt.Errorf("Detector failed to start detector %T", d)
+		}
+	}
 	return nil
 }

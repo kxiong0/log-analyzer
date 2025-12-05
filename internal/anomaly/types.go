@@ -8,7 +8,9 @@ import (
 )
 
 type AnomalyDetector interface {
-	Check(tdb *db.TemplateDB, tmpl common.Template) ([]Anomaly, error)
+	Init(tdb *db.TemplateDB) error
+	Start(done <-chan bool) error                  // done to send a signal to start clean up
+	Check(tmpl common.Template) ([]Anomaly, error) // called each time a template is ingested
 }
 
 type Anomaly struct {

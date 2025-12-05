@@ -10,10 +10,21 @@ import (
 	"time"
 )
 
-type TimingDetector struct{}
+type TimingDetector struct {
+	tdb *db.TemplateDB
+}
 
-func (td TimingDetector) Check(tdb *db.TemplateDB, tmpl common.Template) ([]Anomaly, error) {
-	_, mean, stddev, ts, err := tdb.GetIATStats(tmpl.ID)
+func (td *TimingDetector) Init(tdb *db.TemplateDB) error {
+	td.tdb = tdb
+	return nil
+}
+
+func (td TimingDetector) Start(done <-chan bool) error {
+	return nil
+}
+
+func (td TimingDetector) Check(tmpl common.Template) ([]Anomaly, error) {
+	_, mean, stddev, ts, err := td.tdb.GetIATStats(tmpl.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []Anomaly{}, nil

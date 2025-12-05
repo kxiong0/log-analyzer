@@ -31,6 +31,7 @@ func NewServer() (*Server, error) {
 	ale := alert.NewAlertEngine()
 	done := make(<-chan bool)
 	ale.Start(time.Second*5, done)
+	ae.Start(done)
 
 	s := Server{
 		lp:  lp,

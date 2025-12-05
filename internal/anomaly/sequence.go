@@ -13,10 +13,21 @@ const (
 	probabilityThreshold = 0.05
 )
 
-type SequenceDetector struct{}
+type SequenceDetector struct {
+	tdb *db.TemplateDB
+}
 
-func (sd SequenceDetector) Check(tdb *db.TemplateDB, tmpl common.Template) ([]Anomaly, error) {
-	total, tran, err := tdb.GetTransitionCounts(tmpl.ID, tmpl.K8sMetadata.PodID)
+func (sd *SequenceDetector) Init(tdb *db.TemplateDB) error {
+	sd.tdb = tdb
+	return nil
+}
+
+func (sd SequenceDetector) Start(done <-chan bool) error {
+	return nil
+}
+
+func (sd SequenceDetector) Check(tmpl common.Template) ([]Anomaly, error) {
+	total, tran, err := sd.tdb.GetTransitionCounts(tmpl.ID, tmpl.K8sMetadata.PodID)
 	if err != nil {
 		return nil, err
 	}
