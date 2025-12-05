@@ -1,6 +1,10 @@
 package server
 
 import (
+	"log-analyzer/detectors/frequency"
+	"log-analyzer/detectors/sequence"
+	"log-analyzer/detectors/timing"
+
 	"log-analyzer/internal/alert"
 	"log-analyzer/internal/anomaly"
 	"log-analyzer/internal/db"
@@ -27,9 +31,13 @@ func NewServer() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	ae.AddAnomalyDetector(&frequency.FrequencyDetector{})
+	ae.AddAnomalyDetector(&sequence.SequenceDetector{})
+	ae.AddAnomalyDetector(&timing.TimingDetector{})
 
 	ale := alert.NewAlertEngine()
 	done := make(<-chan bool)
+
 	ale.Start(time.Second*5, done)
 	ae.Start(done)
 

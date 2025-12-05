@@ -3,7 +3,8 @@ package anomaly
 import (
 	"fmt"
 	"log-analyzer/internal/common"
-	db "log-analyzer/internal/db"
+	"log-analyzer/internal/db"
+
 	"log/slog"
 )
 
@@ -15,10 +16,6 @@ type AnomalyEngine struct {
 func NewAnomalyEngine(tdb *db.TemplateDB) (*AnomalyEngine, error) {
 	ae := AnomalyEngine{}
 	ae.tdb = tdb
-
-	ae.AddAnomalyDetector(&FrequencyDetector{})
-	ae.AddAnomalyDetector(&SequenceDetector{})
-	ae.AddAnomalyDetector(&TimingDetector{})
 	return &ae, nil
 }
 
@@ -69,12 +66,12 @@ func (ae *AnomalyEngine) Start(done <-chan bool) error {
 	for _, d := range ae.detectors {
 		err := d.Init(ae.tdb)
 		if err != nil {
-			return fmt.Errorf("Detector failed to init detector %T", d)
+			return fmt.Errorf("detector failed to init detector %T", d)
 		}
 
 		err = d.Start(done)
 		if err != nil {
-			return fmt.Errorf("Detector failed to start detector %T", d)
+			return fmt.Errorf("detector failed to start detector %T", d)
 		}
 	}
 	return nil
